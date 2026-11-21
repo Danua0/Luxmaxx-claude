@@ -115,7 +115,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     } catch (e: Exception) { message.value = "Не удалось скопировать фото"; null }
 
     suspend fun analyzeFace(file: File): FaceResult =
-        FaceAnalyzer.analyze(getApplication(), Uri.fromFile(file))
+        FaceAnalyzer.analyze(getApplication<Application>(), Uri.fromFile(file))
 
     fun saveFaceCheck(check: FaceCheck) = mutate {
         it.copy(faceChecks = it.faceChecks.filterNot { c -> c.id == check.id } + check)
