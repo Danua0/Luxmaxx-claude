@@ -37,12 +37,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.luxmaxx.app.logic.Muscle
 import com.luxmaxx.app.ui.theme.Gold
+import com.luxmaxx.app.ui.theme.IsLight
+import com.luxmaxx.app.ui.theme.Red
+import com.luxmaxx.app.ui.theme.Surface2
+import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
 
-private val BodyBase = Color(0xFF242833)
-private val BodyEdge = Color(0x22FFFFFF)
-private val Cold = Color(0xFF4A3412)
-private val Hot = Color(0xFFFF5A3D)
+private val BodyBase: Color get() = lerp(Surface2, TextLo, if (IsLight) 0.22f else 0.12f)
+private val BodyEdge: Color get() = TextHi.copy(alpha = 0.13f)
+private val Cold: Color get() = lerp(BodyBase, Gold, 0.3f)
+private val Hot: Color get() = Red
 
 fun heatColor(h: Float): Color = when {
     h <= 0.02f -> BodyBase

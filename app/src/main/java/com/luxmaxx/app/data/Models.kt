@@ -126,5 +126,6 @@ data class AppData(
     val seenLevel: Int = 1,
     val achievementsInit: Boolean = false,
     val trainAtHome: Boolean = false,
+    val theme: String = "GOLD",
     val homeEquipment: Set<Equip> = emptySet(),
 )

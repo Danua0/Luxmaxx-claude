@@ -78,6 +78,7 @@ import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldGradient
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Surface1
 import com.luxmaxx.app.ui.theme.Surface2
@@ -126,7 +127,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Text("${i + 1}", style = MaterialTheme.typography.titleLarge,
-                            color = if (isNext) Color(0xFF1C1200) else TextLo)
+                            color = if (isNext) OnAccent else TextLo)
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -306,7 +307,7 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
                             }
                         },
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Filled.Add, "Добавить подход", tint = Color(0xFF1C1200)) }
+                    ) { Icon(Icons.Filled.Add, "Добавить подход", tint = OnAccent) }
                 }
             }
         }
@@ -346,7 +347,7 @@ private fun PlaceSelector(vm: AppViewModel, home: Boolean, equipment: Set<Equip>
                         .clickable { vm.setTrainAtHome(h) }.padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) Color(0xFF1C1200) else TextLo)
+                    Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) OnAccent else TextLo)
                 }
             }
         }

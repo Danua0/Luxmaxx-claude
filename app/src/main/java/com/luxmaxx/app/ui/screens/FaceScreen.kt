@@ -83,6 +83,7 @@ import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Stroke
 import com.luxmaxx.app.ui.theme.Surface1
@@ -152,7 +153,7 @@ fun FaceScreen(vm: AppViewModel) {
     ) {
         item {
             HeroBanner("Лицо", "Сканер на телефоне + AI-разбор кожи. Фото уходит в DeepSeek только по кнопке.", "✨",
-                colors = listOf(Color(0xFF221A3A), Color(0xFF14141E)), accent = Violet, modifier = Modifier.padding(top = 12.dp).enter(0))
+                accent = Violet, modifier = Modifier.padding(top = 12.dp).enter(0))
         }
 
         item {
@@ -248,7 +249,7 @@ fun FaceScreen(vm: AppViewModel) {
                 routine.forEach { r ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { vm.toggleRoutine(r) }) {
                         Checkbox(checked = r in doneToday, onCheckedChange = { vm.toggleRoutine(r) },
-                            colors = CheckboxDefaults.colors(checkedColor = Green, uncheckedColor = TextLo, checkmarkColor = Color(0xFF06140D)))
+                            colors = CheckboxDefaults.colors(checkedColor = Green, uncheckedColor = TextLo, checkmarkColor = OnAccent))
                         Text(r, style = MaterialTheme.typography.bodyMedium, color = if (r in doneToday) TextLo else TextHi)
                     }
                 }

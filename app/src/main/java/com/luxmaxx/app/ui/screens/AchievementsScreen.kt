@@ -48,12 +48,16 @@ import com.luxmaxx.app.ui.components.Confetti
 import com.luxmaxx.app.ui.components.Medal
 import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.shimmer
+import com.luxmaxx.app.ui.theme.Bg
 import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.CardGradient
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldDeep
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Track
+import com.luxmaxx.app.ui.theme.tinted
 
 @Composable
 fun AchievementsScreen(vm: AppViewModel, onBack: () -> Unit) {
@@ -107,7 +111,7 @@ fun LevelCard(lvl: LevelInfo, done: Int? = null, total: Int? = null, modifier: M
     val next = Progress.nextRank(lvl.level)
     Column(
         modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF2B1D07), Color(0xFF17120C), Color(0xFF15171E))))
+            .background(Brush.linearGradient(tinted(Gold, 0.28f)))
             .border(1.dp, Brush.linearGradient(listOf(Gold.copy(alpha = 0.6f), Color.Transparent, Gold.copy(alpha = 0.25f))), RoundedCornerShape(26.dp))
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -120,8 +124,8 @@ fun LevelCard(lvl: LevelInfo, done: Int? = null, total: Int? = null, modifier: M
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("LVL", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1C1200))
-                    Text("${lvl.level}", style = MaterialTheme.typography.displaySmall, color = Color(0xFF1C1200))
+                    Text("LVL", style = MaterialTheme.typography.labelSmall, color = OnAccent)
+                    Text("${lvl.level}", style = MaterialTheme.typography.displaySmall, color = OnAccent)
                 }
             }
             Column(Modifier.weight(1f)) {
@@ -131,7 +135,7 @@ fun LevelCard(lvl: LevelInfo, done: Int? = null, total: Int? = null, modifier: M
                     style = MaterialTheme.typography.labelMedium, color = Gold)
             }
         }
-        Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(Color(0x22FFFFFF))) {
+        Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(Track)) {
             Box(
                 Modifier.fillMaxWidth(lvl.progress.coerceAtLeast(0.03f)).height(12.dp).clip(CircleShape)
                     .background(Brush.horizontalGradient(listOf(GoldDeep, Gold))).shimmer(0.5f, 1800)
@@ -148,7 +152,7 @@ fun CelebrationOverlay(c: AppViewModel.Celebration, onDismiss: () -> Unit) {
     LaunchedEffect(c) { scale.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 180f)) }
     LaunchedEffect(c) { kotlinx.coroutines.delay(4500); onDismiss() }
     Box(
-        Modifier.fillMaxSize().background(Color(0xCC05060A))
+        Modifier.fillMaxSize().background(Bg.copy(alpha = 0.88f))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {

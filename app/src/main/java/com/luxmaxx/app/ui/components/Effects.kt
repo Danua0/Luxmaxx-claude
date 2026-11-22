@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.SpanStyle
@@ -61,18 +62,28 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.luxmaxx.app.ui.theme.Accent3
+import com.luxmaxx.app.ui.theme.AppTheme
 import com.luxmaxx.app.ui.theme.Bg
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.Display
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldDeep
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.IsLight
+import com.luxmaxx.app.ui.theme.IsRetro
 import com.luxmaxx.app.ui.theme.Red
+import com.luxmaxx.app.ui.theme.Stroke
+import com.luxmaxx.app.ui.theme.Surface1
+import com.luxmaxx.app.ui.theme.Surface2
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.ThemeState
 import com.luxmaxx.app.ui.theme.Violet
+import com.luxmaxx.app.ui.theme.tinted
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
@@ -83,34 +94,143 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun AnimatedBackdrop(modifier: Modifier = Modifier) {
+    if (IsRetro) { SynthwaveBackdrop(ThemeState.palette.theme == AppTheme.MIAMI_NIGHT, modifier); return }
     val t = rememberInfiniteTransition(label = "bg")
     val a by t.animateFloat(0f, 1f, infiniteRepeatable(tween(16000, easing = LinearEasing)), label = "a")
     val pulse by t.animateFloat(0.85f, 1.15f, infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "p")
+    val blobs = ThemeState.palette.blobs
+    val bg = Bg
+    val line = TextHi
     Canvas(modifier.fillMaxSize()) {
-        drawRect(Bg)
+        drawRect(bg)
         val w = size.width; val h = size.height
         val ang = a * 2f * PI.toFloat()
         fun blob(cx: Float, cy: Float, r: Float, c: Color) = drawCircle(
             Brush.radialGradient(listOf(c, c.copy(alpha = 0f)), center = Offset(cx, cy), radius = r),
             radius = r, center = Offset(cx, cy),
         )
-        blob(w * (0.85f + 0.08f * cos(ang)), h * (0.02f + 0.04f * sin(ang)), w * 0.95f * pulse, Color(0x40FF9A3D))
-        blob(w * (0.05f + 0.10f * sin(ang * 0.7f)), h * (0.30f + 0.05f * cos(ang)), w * 0.75f, Color(0x229A7BFF))
-        blob(w * (0.90f + 0.06f * sin(ang * 1.3f)), h * (0.70f + 0.06f * cos(ang * 0.8f)), w * 0.7f / pulse, Color(0x1A5AB2FF))
-        blob(w * (0.25f + 0.08f * cos(ang * 1.1f)), h * (1.02f), w * 0.8f, Color(0x1FFFC14D))
-        // тонкая сетка-«грид» для глубины
+        blob(w * (0.85f + 0.08f * cos(ang)), h * (0.02f + 0.04f * sin(ang)), w * 0.95f * pulse, blobs[0])
+        blob(w * (0.05f + 0.10f * sin(ang * 0.7f)), h * (0.30f + 0.05f * cos(ang)), w * 0.75f, blobs[1])
+        blob(w * (0.90f + 0.06f * sin(ang * 1.3f)), h * (0.70f + 0.06f * cos(ang * 0.8f)), w * 0.7f / pulse, blobs[2])
+        blob(w * (0.25f + 0.08f * cos(ang * 1.1f)), h * (1.02f), w * 0.8f, blobs[3])
+        // тонкая сетка для глубины
         val step = 44.dp.toPx()
         var y = 0f
         while (y < h * 0.45f) {
-            drawLine(Color.White.copy(alpha = 0.018f * (1 - y / (h * 0.45f))), Offset(0f, y), Offset(w, y), 1f)
+            drawLine(line.copy(alpha = 0.022f * (1 - y / (h * 0.45f))), Offset(0f, y), Offset(w, y), 1f)
             y += step
         }
         var x = 0f
         while (x < w) {
-            drawLine(Color.White.copy(alpha = 0.014f), Offset(x, 0f), Offset(x, h * 0.45f), 1f)
+            drawLine(line.copy(alpha = 0.016f), Offset(x, 0f), Offset(x, h * 0.45f), 1f)
             x += step
         }
     }
+}
+
+// =====================================================================
+//  Ретро-фон 80-х: закат, солнце в полоску, пальмы и неоновая сетка
+// =====================================================================
+
+@Composable
+fun SynthwaveBackdrop(night: Boolean, modifier: Modifier = Modifier) {
+    val t = rememberInfiniteTransition(label = "sw")
+    val scroll by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "scroll")
+    val twinkle by t.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "tw")
+    val sunPulse by t.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "sp")
+    val bg = Bg
+    Canvas(modifier.fillMaxSize()) {
+        val w = size.width; val h = size.height
+        val horizon = h * 0.33f
+        drawRect(bg)
+        // небо
+        val sky = if (night) listOf(Color(0xFF04020B), Color(0xFF12062A), Color(0xFF3A0A4E))
+        else listOf(Color(0xFF1B0836), Color(0xFF55186C), Color(0xFFE2457F), Color(0xFFFF9E5A))
+        drawRect(Brush.verticalGradient(sky, startY = 0f, endY = horizon), size = Size(w, horizon))
+        // звёзды
+        if (night) {
+            val rnd = Random(7)
+            repeat(80) { i ->
+                val sx = rnd.nextFloat() * w; val sy = rnd.nextFloat() * horizon * 0.85f
+                val r = (rnd.nextFloat() * 1.4f + 0.5f) * density * 0.7f
+                val a = (0.35f + rnd.nextFloat() * 0.65f) * (if (i % 3 == 0) twinkle else 1f)
+                drawCircle(Color.White.copy(alpha = a), r, Offset(sx, sy))
+            }
+        }
+        // солнце
+        val sunR = w * 0.29f * sunPulse
+        val sc = Offset(w * 0.5f, horizon - sunR * 0.12f)
+        val glowC = if (night) Color(0xFFFF2E97) else Color(0xFFFF7A59)
+        drawCircle(Brush.radialGradient(listOf(glowC.copy(alpha = 0.55f), Color.Transparent), sc, sunR * 1.9f), sunR * 1.9f, sc)
+        val sunColors = if (night) listOf(Color(0xFFFF6AD5), Color(0xFFFF2E97), Color(0xFF9B1BFF))
+        else listOf(Color(0xFFFFF07A), Color(0xFFFFA445), Color(0xFFFF3D8B))
+        clipRect(0f, 0f, w, horizon) {
+            drawCircle(Brush.verticalGradient(sunColors, startY = sc.y - sunR, endY = sc.y + sunR * 0.6f), sunR, sc)
+            // «жалюзи» на нижней половине солнца
+            val stripe = sky.last()
+            for (i in 0 until 7) {
+                val sy = sc.y - sunR * 0.05f + i * sunR * 0.14f
+                val th = (1.5f + i * 1.3f) * density
+                drawRect(stripe, Offset(sc.x - sunR, sy), Size(sunR * 2, th))
+            }
+        }
+        // пальмы
+        val palmC = if (night) Color(0xFF030108) else Color(0xFF16051F)
+        palm(w * 0.07f, horizon + h * 0.03f, h * 0.24f, 1f, palmC)
+        palm(w * 0.17f, horizon + h * 0.02f, h * 0.16f, 0.6f, palmC)
+        palm(w * 0.95f, horizon + h * 0.035f, h * 0.27f, -1f, palmC)
+        // пол
+        val floorTop = if (night) Color(0xFF14052A) else Color(0xFF2A0B44)
+        drawRect(Brush.verticalGradient(listOf(floorTop, bg), startY = horizon, endY = h), Offset(0f, horizon), Size(w, h - horizon))
+        // перспективная сетка
+        val grid = if (night) Color(0xFF00E5FF) else Color(0xFFFF4FA3)
+        val sw = 1.4f * density
+        for (i in -14..14) {
+            val xh = w / 2 + i * w * 0.045f
+            val xb = w / 2 + i * w * 0.42f
+            drawLine(grid.copy(alpha = 0.30f), Offset(xh, horizon), Offset(xb, h), sw)
+        }
+        for (k in 0 until 16) {
+            val z = (k + scroll) / 16f
+            val yy = horizon + (h - horizon) * z.pow(2.2f)
+            drawLine(grid.copy(alpha = (0.08f + 0.42f * z).coerceAtMost(0.5f)), Offset(0f, yy), Offset(w, yy), sw)
+        }
+        // линия горизонта со свечением
+        drawRect(Brush.verticalGradient(listOf(Color.Transparent, grid.copy(alpha = 0.35f), Color.Transparent),
+            startY = horizon - 18 * density, endY = horizon + 18 * density), Offset(0f, horizon - 18 * density), Size(w, 36 * density))
+        drawLine(grid, Offset(0f, horizon), Offset(w, horizon), 2f * density)
+        // затемнение снизу — чтобы карточки читались
+        drawRect(Brush.verticalGradient(listOf(Color.Transparent, bg.copy(alpha = 0.6f)), startY = horizon, endY = h),
+            Offset(0f, horizon), Size(w, h - horizon))
+    }
+}
+
+private fun DrawScope.palm(x: Float, baseY: Float, height: Float, lean: Float, color: Color) {
+    val top = Offset(x + lean * height * 0.22f, baseY - height)
+    val tw = height * 0.022f
+    val trunk = Path().apply {
+        moveTo(x - tw * 1.4f, baseY)
+        quadraticBezierTo(x + lean * height * 0.02f - tw, baseY - height * 0.55f, top.x - tw * 0.6f, top.y)
+        lineTo(top.x + tw * 0.6f, top.y)
+        quadraticBezierTo(x + lean * height * 0.02f + tw, baseY - height * 0.55f, x + tw * 1.4f, baseY)
+        close()
+    }
+    drawPath(trunk, color)
+    val len = height * 0.46f
+    for (deg in listOf(190f, 212f, 238f, 262f, 288f, 314f, 338f, 355f)) {
+        val rad = Math.toRadians(deg.toDouble())
+        val dx = cos(rad).toFloat(); val dy = sin(rad).toFloat()
+        val end = Offset(top.x + dx * len, top.y + dy * len * 0.45f + len * 0.42f)
+        val ctrl = Offset(top.x + dx * len * 0.55f, top.y + dy * len * 0.55f - len * 0.12f)
+        val frond = Path().apply {
+            moveTo(top.x, top.y)
+            quadraticBezierTo(ctrl.x, ctrl.y - len * 0.07f, end.x, end.y)
+            quadraticBezierTo(ctrl.x, ctrl.y + len * 0.07f, top.x, top.y + len * 0.04f)
+            close()
+        }
+        drawPath(frond, color)
+    }
+    drawCircle(color, tw * 2.2f, top)
 }
 
 // =====================================================================
@@ -131,11 +251,11 @@ fun LogoMark(size: Dp = 64.dp, glow: Boolean = true, spin: Boolean = false) {
         // кольцо
         rotate(if (spin) rot else -30f, c) {
             drawCircle(
-                Brush.sweepGradient(listOf(Gold, GoldDeep, Color(0xFFE0553A), Gold), center = c),
+                Brush.sweepGradient(listOf(Gold, GoldDeep, Accent3, Gold), center = c),
                 radius = s * 0.44f, center = c, style = Stroke(s * 0.07f),
             )
         }
-        drawCircle(Color(0xFF12141A), radius = s * 0.38f, center = c)
+        drawCircle(Surface1, radius = s * 0.38f, center = c)
         // гантель
         val gold = Brush.linearGradient(listOf(Gold, GoldDeep), start = Offset(0f, c.y - s * 0.2f), end = Offset(0f, c.y + s * 0.2f))
         val bw = s * 0.07f
@@ -144,7 +264,7 @@ fun LogoMark(size: Dp = 64.dp, glow: Boolean = true, spin: Boolean = false) {
         )
         plate(c.x - s * 0.21f, s * 0.20f); plate(c.x - s * 0.13f, s * 0.32f)
         plate(c.x + s * 0.13f, s * 0.32f); plate(c.x + s * 0.21f, s * 0.20f)
-        drawRoundRect(Color.White, topLeft = Offset(c.x - s * 0.10f, c.y - s * 0.025f), size = Size(s * 0.20f, s * 0.05f),
+        drawRoundRect(TextHi, topLeft = Offset(c.x - s * 0.10f, c.y - s * 0.025f), size = Size(s * 0.20f, s * 0.05f),
             cornerRadius = CornerRadius(s * 0.025f))
     }
 }
@@ -156,7 +276,11 @@ fun Wordmark(size: Int = 22) {
             withStyle(SpanStyle(color = TextHi)) { append("LUX") }
             withStyle(SpanStyle(brush = Brush.linearGradient(listOf(Gold, GoldDeep)))) { append("MAXX") }
         },
-        fontFamily = Display, fontWeight = FontWeight.Black, fontSize = size.sp, letterSpacing = (-0.5).sp,
+        fontFamily = Display,
+        fontWeight = if (IsRetro) FontWeight.Normal else FontWeight.Black,
+        fontSize = size.sp,
+        letterSpacing = (if (IsRetro) 0f else -0.5f).sp,
+        style = if (IsRetro) androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Gold, blurRadius = 24f)) else androidx.compose.ui.text.TextStyle.Default,
     )
 }
 
@@ -251,7 +375,7 @@ fun HeroBanner(
     title: String,
     subtitle: String,
     emoji: String,
-    colors: List<Color> = listOf(Color(0xFF3A2208), Color(0xFF1A1410)),
+    @Suppress("UNUSED_PARAMETER") colors: List<Color>? = null,
     accent: Color = Gold,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit = {},
@@ -262,7 +386,7 @@ fun HeroBanner(
     val shape = RoundedCornerShape(28.dp)
     Box(
         modifier.fillMaxWidth().clip(shape)
-            .background(Brush.linearGradient(colors))
+            .background(Brush.linearGradient(tinted(accent, if (IsLight) 0.16f else 0.26f)))
             .border(1.dp, Brush.linearGradient(listOf(accent.copy(alpha = 0.55f), Color.Transparent, accent.copy(alpha = 0.2f))), shape),
     ) {
         // декоративная графика
@@ -416,11 +540,11 @@ fun Medal(emoji: String, color: Color, unlocked: Boolean, size: Dp = 72.dp, prog
             drawPath(
                 path,
                 if (unlocked) Brush.linearGradient(listOf(color, color.copy(alpha = 0.55f)), Offset(0f, 0f), Offset(s, s))
-                else Brush.linearGradient(listOf(Color(0xFF2A2E3A), Color(0xFF1B1E27))),
+                else Brush.linearGradient(listOf(Stroke, Surface2)),
             )
-            drawCircle(if (unlocked) Color(0xFF15171E) else Color(0xFF14161D), s * 0.29f, c)
+            drawCircle(Surface1, s * 0.29f, c)
             drawCircle(
-                if (unlocked) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f),
+                if (unlocked) Color.White.copy(alpha = 0.25f) else TextHi.copy(alpha = 0.06f),
                 s * 0.29f, c, style = Stroke(s * 0.015f),
             )
             if (!unlocked && progress > 0f) drawArc(
@@ -538,7 +662,7 @@ fun MarkdownText(text: String, modifier: Modifier = Modifier, color: Color = Tex
                     ) { Text(num, style = MaterialTheme.typography.labelSmall, color = accent) }
                     Text(inline(trimmed.replaceFirst(Regex("^\\d+[.)]\\s+"), ""), accent), style = MaterialTheme.typography.bodyMedium, color = color)
                 }
-                trimmed.startsWith("---") -> Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+                trimmed.startsWith("---") -> Box(Modifier.fillMaxWidth().height(1.dp).background(TextHi.copy(alpha = 0.1f)))
                 else -> Text(inline(trimmed, accent), style = MaterialTheme.typography.bodyMedium, color = color)
             }
         }
@@ -554,7 +678,7 @@ private fun inline(s: String, accent: Color) = buildAnnotatedString {
         val end = src.indexOf("**", start + 2)
         if (end < 0) { append(src.substring(i)); break }
         append(src.substring(i, start))
-        withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color.White)) { append(src.substring(start + 2, end)) }
+        withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = TextHi)) { append(src.substring(start + 2, end)) }
         i = end + 2
     }
 }

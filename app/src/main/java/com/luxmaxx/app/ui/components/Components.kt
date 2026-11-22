@@ -59,10 +59,13 @@ import com.luxmaxx.app.ui.theme.CardGradient
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldDeep
 import com.luxmaxx.app.ui.theme.GoldGradient
+import com.luxmaxx.app.ui.theme.HeroGradient
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.Stroke as StrokeColor
 import com.luxmaxx.app.ui.theme.Surface1
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Track
 import kotlin.math.roundToInt
 
 private val CardShape = RoundedCornerShape(24.dp)
@@ -141,7 +144,7 @@ fun HeroCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, conte
             .pressScale(src)
             .fillMaxWidth()
             .clip(CardShape)
-            .background(Brush.linearGradient(listOf(Color(0xFFFFC14D), Color(0xFFFF8A3D), Color(0xFFE0553A))))
+            .background(HeroGradient)
             .shimmer(0.28f)
             .then(if (onClick != null) Modifier.clickable(interactionSource = src, indication = null, onClick = onClick) else Modifier)
             .padding(20.dp),
@@ -181,7 +184,7 @@ fun GradientButton(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val c = if (enabled) Color(0xFF1C1200) else TextLo
+        val c = if (enabled) OnAccent else TextLo
         if (icon != null) { Icon(icon, null, tint = c, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)) }
         Text(text, color = c, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
     }
@@ -224,7 +227,7 @@ fun ProgressRing(
             val st = thickness.toPx()
             val arcSize = Size(this.size.width - st, this.size.height - st)
             val tl = Offset(st / 2, st / 2)
-            drawArc(Color(0x1FFFFFFF), -90f, 360f, false, tl, arcSize, style = Stroke(st, cap = StrokeCap.Round))
+            drawArc(Track, -90f, 360f, false, tl, arcSize, style = Stroke(st, cap = StrokeCap.Round))
             if (anim > 0f) drawArc(
                 Brush.sweepGradient(colors + colors.first()), -90f, 360f * anim, false, tl, arcSize,
                 style = Stroke(st, cap = StrokeCap.Round),
@@ -246,7 +249,7 @@ fun MacroBar(label: String, value: Int, target: Int, unit: String, color: Color 
             Text(" / $target $unit", style = MaterialTheme.typography.bodySmall, color = TextLo)
         }
         Spacer(Modifier.height(6.dp))
-        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(Color(0x1AFFFFFF))) {
+        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(Track)) {
             Box(
                 Modifier.fillMaxWidth(anim).height(10.dp).clip(CircleShape)
                     .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.55f), color)))
@@ -307,7 +310,7 @@ fun LabeledSlider(label: String, value: Float, range: ClosedFloatingPointRange<F
         Slider(
             value = value, onValueChange = onChange, valueRange = range, steps = steps,
             colors = SliderDefaults.colors(
-                thumbColor = Gold, activeTrackColor = Gold, inactiveTrackColor = Color(0x22FFFFFF),
+                thumbColor = Gold, activeTrackColor = Gold, inactiveTrackColor = Track,
                 activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent,
             ),
         )
@@ -334,7 +337,7 @@ fun LineChart(values: List<Double>, modifier: Modifier = Modifier, color: Color 
             // сетка
             for (g in 0..3) {
                 val y = size.height * g / 3
-                drawLine(Color(0x12FFFFFF), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+                drawLine(Track, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
             }
             val line = Path().apply {
                 moveTo(pt(0).x, pt(0).y)
@@ -379,7 +382,7 @@ fun GoldChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Un
             .padding(horizontal = 14.dp, vertical = 9.dp),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides (if (selected) Color(0xFF1C1200) else TextHi),
+            androidx.compose.material3.LocalContentColor provides (if (selected) OnAccent else TextHi),
             androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.labelLarge,
         ) { label() }
     }

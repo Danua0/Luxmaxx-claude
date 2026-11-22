@@ -114,8 +114,7 @@ fun NutritionScreen(vm: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            HeroBanner("Питание", "Цель: ${t.kcal} ккал · ${t.protein} г белка в день", "🥩",
-                colors = listOf(Color(0xFF0F2A1E), Color(0xFF12161A)), accent = Green, modifier = Modifier.padding(top = 10.dp).enter(0))
+            HeroBanner("Питание", "Цель: ${t.kcal} ккал · ${t.protein} г белка в день", "🥩", accent = Green, modifier = Modifier.padding(top = 10.dp).enter(0))
         }
         item {
             SectionCard(modifier = Modifier.enter(1)) {
@@ -123,9 +122,9 @@ fun NutritionScreen(vm: AppViewModel) {
                     ConcentricRings(
                         listOf(
                             RingSpec(kcal.toFloat() / t.kcal, listOf(GoldDeep, Gold)),
-                            RingSpec(prot.toFloat() / t.protein, listOf(Color(0xFF1FAF74), Green)),
-                            RingSpec(foods.sumOf { it.carbs }.toFloat() / t.carbs.coerceAtLeast(1), listOf(Color(0xFF3D7BFF), Blue)),
-                            RingSpec(foods.sumOf { it.fat }.toFloat() / t.fat.coerceAtLeast(1), listOf(Color(0xFF7B5BFF), Violet)),
+                            RingSpec(prot.toFloat() / t.protein, listOf(Green.copy(alpha = 0.6f), Green)),
+                            RingSpec(foods.sumOf { it.carbs }.toFloat() / t.carbs.coerceAtLeast(1), listOf(Blue.copy(alpha = 0.6f), Blue)),
+                            RingSpec(foods.sumOf { it.fat }.toFloat() / t.fat.coerceAtLeast(1), listOf(Violet.copy(alpha = 0.6f), Violet)),
                         ),
                         size = 140.dp, thickness = 10.dp, gap = 3.dp,
                     ) {

@@ -63,6 +63,7 @@ import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.CardGradient
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldDeep
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.Stroke
 import com.luxmaxx.app.ui.theme.Surface2
 import com.luxmaxx.app.ui.theme.TextHi
@@ -135,7 +136,7 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
                                 .clip(shape)
                                 .background(Brush.linearGradient(listOf(Gold, GoldDeep)))
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
-                            color = Color(0xFF1C1200),
+                            color = OnAccent,
                             style = MaterialTheme.typography.bodyMedium,
                         ) else MarkdownText(
                             m.content,
@@ -181,7 +182,7 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
                     .background(if (canSend) Brush.linearGradient(listOf(Gold, GoldDeep)) else Brush.linearGradient(listOf(Surface2, Surface2)))
                     .clickable(enabled = canSend) { vm.sendChat(input); input = "" },
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.AutoMirrored.Filled.Send, "Отправить", tint = if (canSend) Color(0xFF1C1200) else TextLo) }
+            ) { Icon(Icons.AutoMirrored.Filled.Send, "Отправить", tint = if (canSend) OnAccent else TextLo) }
         }
     }
 }

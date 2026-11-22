@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
@@ -57,6 +58,7 @@ import com.luxmaxx.app.ui.components.Pill
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
 import com.luxmaxx.app.ui.components.StatTile
+import com.luxmaxx.app.ui.components.ThemePicker
 import com.luxmaxx.app.ui.components.Wordmark
 import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.fmt
@@ -66,6 +68,7 @@ import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.ThemeState
 import com.luxmaxx.app.ui.theme.Violet
 
 @Composable
@@ -122,6 +125,12 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
         }
         if (!firstRun) item {
             GradientButton("🏆  Все достижения", onClick = onAchievements, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+            SectionCard("Оформление", icon = Icons.Filled.Palette, accent = Violet) {
+                Text("Тема применяется сразу — попробуй все.", style = MaterialTheme.typography.bodySmall, color = TextLo)
+                ThemePicker(ThemeState.palette.theme) { vm.setTheme(it) }
+            }
         }
         item {
             SectionCard("О тебе", icon = Icons.Filled.Person) {

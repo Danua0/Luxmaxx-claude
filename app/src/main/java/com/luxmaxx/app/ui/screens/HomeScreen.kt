@@ -73,6 +73,7 @@ import com.luxmaxx.app.ui.components.StatTile
 import com.luxmaxx.app.ui.components.Wordmark
 import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.fmt
+import com.luxmaxx.app.ui.theme.AppTheme
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.CardGradient
@@ -80,17 +81,20 @@ import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldDeep
 import com.luxmaxx.app.ui.theme.GoldGradient
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.OnAccent
 import com.luxmaxx.app.ui.theme.Red
+import com.luxmaxx.app.ui.theme.Stroke
 import com.luxmaxx.app.ui.theme.Surface1
+import com.luxmaxx.app.ui.theme.Surface2
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.ThemeState
+import com.luxmaxx.app.ui.theme.Track
 import com.luxmaxx.app.ui.theme.Violet
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-private val Dark = Color(0xFF1C1200)
 
 @Composable
 fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> Unit) {
@@ -132,18 +136,28 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                 Spacer(Modifier.width(8.dp))
                 Wordmark(18)
                 Spacer(Modifier.weight(1f))
+                // быстрое переключение темы по кругу
+                Box(
+                    Modifier.size(36.dp).clip(CircleShape).background(Surface2).border(1.dp, Stroke, CircleShape)
+                        .clickable {
+                            val all = AppTheme.entries
+                            vm.setTheme(all[(ThemeState.palette.theme.ordinal + 1) % all.size])
+                        },
+                    contentAlignment = Alignment.Center,
+                ) { Text(ThemeState.palette.theme.emoji, fontSize = 16.sp) }
+                Spacer(Modifier.width(8.dp))
                 if (streak > 0) Row(
-                    Modifier.clip(CircleShape).background(Color(0x33FF6B3D)).padding(horizontal = 10.dp, vertical = 6.dp),
+                    Modifier.clip(CircleShape).background(Red.copy(alpha = 0.18f)).padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("🔥", fontSize = 14.sp)
-                    Text(" $streak", style = MaterialTheme.typography.labelLarge, color = Color(0xFFFF9A6B))
+                    Text(" $streak", style = MaterialTheme.typography.labelLarge, color = Red)
                 }
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.clickable(onClick = onProfile), contentAlignment = Alignment.Center) {
                     ProgressRing(lvl.progress, size = 46.dp, thickness = 3.dp) {
                         Box(Modifier.size(36.dp).clip(CircleShape).background(GoldGradient), contentAlignment = Alignment.Center) {
-                            Text((name?.first() ?: 'L').uppercase(), color = Dark, fontWeight = FontWeight.Black,
+                            Text((name?.first() ?: 'L').uppercase(), color = OnAccent, fontWeight = FontWeight.Black,
                                 style = MaterialTheme.typography.titleMedium)
                         }
                     }
@@ -175,12 +189,12 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(if (trainedToday) "СЕГОДНЯ" else "СЛЕДУЮЩАЯ ТРЕНИРОВКА", style = MaterialTheme.typography.labelSmall,
-                            color = Dark.copy(alpha = 0.65f))
-                        Text(if (trainedToday) "Выполнено ✓" else next.name, style = MaterialTheme.typography.headlineMedium, color = Dark)
+                            color = OnAccent.copy(alpha = 0.65f))
+                        Text(if (trainedToday) "Выполнено ✓" else next.name, style = MaterialTheme.typography.headlineMedium, color = OnAccent)
                         Text(
                             if (trainedToday) "Отдыхай, ешь и спи — мышцы растут сейчас"
                             else "${next.exercises.size} упражнений · ≈${next.exercises.sumOf { it.sets } * 3} мин",
-                            style = MaterialTheme.typography.bodySmall, color = Dark.copy(alpha = 0.75f),
+                            style = MaterialTheme.typography.bodySmall, color = OnAccent.copy(alpha = 0.75f),
                         )
                     }
                     Text(if (trainedToday) "🏆" else "🏋️", fontSize = 54.sp)
@@ -188,7 +202,7 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Row(
-                        Modifier.clip(CircleShape).background(Dark).padding(horizontal = 18.dp, vertical = 11.dp),
+                        Modifier.clip(CircleShape).background(OnAccent).padding(horizontal = 18.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(if (trainedToday) "Дневник" else "Начать", color = Gold, style = MaterialTheme.typography.labelLarge)
@@ -197,8 +211,8 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                     }
                     Spacer(Modifier.weight(1f))
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("$weekWorkouts/${d.profile?.trainingDays ?: 3}", style = MaterialTheme.typography.headlineSmall, color = Dark)
-                        Text("за неделю", style = MaterialTheme.typography.labelSmall, color = Dark.copy(alpha = 0.65f))
+                        Text("$weekWorkouts/${d.profile?.trainingDays ?: 3}", style = MaterialTheme.typography.headlineSmall, color = OnAccent)
+                        Text("за неделю", style = MaterialTheme.typography.labelSmall, color = OnAccent.copy(alpha = 0.65f))
                     }
                 }
             }
@@ -211,8 +225,8 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                     ConcentricRings(
                         listOf(
                             RingSpec(kcal.toFloat() / t.kcal, listOf(GoldDeep, Gold)),
-                            RingSpec(prot.toFloat() / t.protein, listOf(Color(0xFF1FAF74), Green)),
-                            RingSpec(carbs.toFloat() / t.carbs.coerceAtLeast(1), listOf(Color(0xFF3D7BFF), Blue)),
+                            RingSpec(prot.toFloat() / t.protein, listOf(Green.copy(alpha = 0.6f), Green)),
+                            RingSpec(carbs.toFloat() / t.carbs.coerceAtLeast(1), listOf(Blue.copy(alpha = 0.6f), Blue)),
                         ),
                         size = 140.dp, thickness = 12.dp,
                     ) {
@@ -366,11 +380,11 @@ private fun WeekStrip(trained: Set<String>, active: Set<String>, monday: LocalDa
                         .background(
                             when {
                                 did -> Brush.linearGradient(listOf(Gold, GoldDeep))
-                                any -> Brush.linearGradient(listOf(Color(0x334A3412), Color(0x334A3412)))
+                                any -> Brush.linearGradient(listOf(Gold.copy(alpha = 0.16f), Gold.copy(alpha = 0.16f)))
                                 else -> Brush.linearGradient(listOf(Surface1, Surface1))
                             }
                         )
-                        .border(if (isToday) 2.dp else 1.dp, if (isToday) Gold else Color(0x14FFFFFF), CircleShape),
+                        .border(if (isToday) 2.dp else 1.dp, if (isToday) Gold else Track, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     when {

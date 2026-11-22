@@ -4,7 +4,13 @@ Android-приложение для набора мышечной массы и 
 
 ## Что умеет
 
-**Оформление** — тёмная тема с золотом, шрифты Unbounded и Manrope, анимированный фон, сплэш-экран, плавающая навигация, карта мышц, уровни и достижения с конфетти.
+**Оформление** — четыре темы, переключаются на лету (Профиль → Оформление или кнопка на главной):
+- 🏆 **Золото** — тёмная классика с золотом;
+- ☀️ **Светлая** — чистый светлый вариант;
+- 🌴 **Неон Майами** — ретро 80-х: закат, полосатое солнце, пальмы, неоновая сетка, рукописный неоновый шрифт;
+- 🌃 **Майами ночь** — то же в ночном неоне со звёздами.
+
+Шрифты Unbounded и Manrope (неоновые темы — Pacifico, Exo 2, Russo One), анимированный фон, сплэш-экран, плавающая навигация, карта мышц, уровни и достижения с конфетти.
 
 
 **Главная** — прогресс по калориям/белку за день, следующая тренировка, график веса и темп набора (кг/нед.) с подсказкой, нормально ли растёшь.
@@ -54,4 +60,4 @@ Kotlin, Jetpack Compose (Material 3), Navigation Compose, kotlinx.serialization 
 
 ## Шрифты
 
-[Unbounded](https://github.com/googlefonts/unbounded) и [Manrope](https://github.com/sharanda/manrope) распространяются по лицензии SIL Open Font License 1.1.
+[Unbounded](https://github.com/googlefonts/unbounded), [Manrope](https://github.com/sharanda/manrope), [Pacifico](https://github.com/googlefonts/Pacifico), [Exo 2](https://github.com/googlefonts/exo2) и [Russo One](https://fonts.google.com/specimen/Russo+One) распространяются по лицензии SIL Open Font License 1.1.

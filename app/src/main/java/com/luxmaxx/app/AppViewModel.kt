@@ -28,6 +28,8 @@ import com.luxmaxx.app.logic.Program
 import com.luxmaxx.app.logic.Programs
 import com.luxmaxx.app.logic.Progress
 import com.luxmaxx.app.logic.Targets
+import com.luxmaxx.app.ui.theme.AppTheme
+import com.luxmaxx.app.ui.theme.ThemeState
 import java.io.File
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +44,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = Repository(app)
     private val _data = MutableStateFlow(repo.load())
     val data: StateFlow<AppData> = _data.asStateFlow()
+
+    init {
+        ThemeState.apply(themeOf(_data.value.theme))
+    }
+
+    private fun themeOf(name: String) = AppTheme.entries.firstOrNull { it.name == name } ?: AppTheme.GOLD
+
+    fun setTheme(t: AppTheme) {
+        ThemeState.apply(t)
+        mutate { it.copy(theme = t.name) }
+    }
 
     val aiBusy = MutableStateFlow(false)
     val message = MutableStateFlow<String?>(null)   // снекбар

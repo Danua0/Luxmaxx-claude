@@ -64,6 +64,8 @@ import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.GoldGradient
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.OnAccent
+import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Stroke
 import com.luxmaxx.app.ui.theme.Surface1
 import com.luxmaxx.app.ui.theme.TextHi
@@ -97,8 +99,8 @@ fun LooksScreen(vm: AppViewModel) {
                         .clickable { tab = i }.padding(vertical = 10.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(t.icon, null, tint = if (sel) Color(0xFF1C1200) else TextLo, modifier = Modifier.size(16.dp))
-                    Text(" ${t.title}", style = MaterialTheme.typography.labelMedium, color = if (sel) Color(0xFF1C1200) else TextLo, maxLines = 1)
+                    Icon(t.icon, null, tint = if (sel) OnAccent else TextLo, modifier = Modifier.size(16.dp))
+                    Text(" ${t.title}", style = MaterialTheme.typography.labelMedium, color = if (sel) OnAccent else TextLo, maxLines = 1)
                 }
             }
         }
@@ -119,7 +121,7 @@ fun LooksScreen(vm: AppViewModel) {
 private fun SelectChip(text: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text,
-        color = if (selected) Color(0xFF1C1200) else TextHi,
+        color = if (selected) OnAccent else TextHi,
         style = MaterialTheme.typography.labelLarge,
         modifier = Modifier.clip(CircleShape)
             .background(if (selected) GoldGradient else Brush.linearGradient(listOf(Surface1, Surface1)))
@@ -181,7 +183,7 @@ private fun HairTab(vm: AppViewModel) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             HeroBanner("Волосы", "AI подберёт стрижку под форму лица и уход под твой тип волос", "💈",
-                colors = listOf(Color(0xFF2A1218), Color(0xFF14141A)), accent = Color(0xFFFF6B8A), modifier = Modifier.padding(top = 12.dp).enter(0))
+                accent = Red, modifier = Modifier.padding(top = 12.dp).enter(0))
         }
         item {
             SectionCard("Твои волосы", icon = Icons.Filled.ContentCut) {
@@ -254,7 +256,7 @@ private fun StyleTab(vm: AppViewModel) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             HeroBanner("Стиль", "Как одеваться, чтобы фигура выглядела мощнее", "🧥",
-                colors = listOf(Color(0xFF0F1E33), Color(0xFF12141A)), accent = Blue, modifier = Modifier.padding(top = 12.dp).enter(0))
+                accent = Blue, modifier = Modifier.padding(top = 12.dp).enter(0))
         }
         item {
             SectionCard("Твой стиль", icon = Icons.Filled.Checkroom) {
