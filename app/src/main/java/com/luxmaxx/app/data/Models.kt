@@ -20,6 +20,13 @@ enum class Experience(val title: String) {
 }
 
 @Serializable
+enum class Equip(val title: String, val emoji: String) {
+    DUMBBELLS("Гантели", "🏋️"),
+    BAR("Турник", "🪜"),
+    BANDS("Резинки", "🎗️"),
+}
+
+@Serializable
 data class Profile(
     val name: String = "",
     val sex: Sex = Sex.MALE,
@@ -118,4 +125,6 @@ data class AppData(
     val seenAchievements: Set<String> = emptySet(),
     val seenLevel: Int = 1,
     val achievementsInit: Boolean = false,
+    val trainAtHome: Boolean = false,
+    val homeEquipment: Set<Equip> = emptySet(),
 )

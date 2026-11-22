@@ -10,6 +10,7 @@ import com.luxmaxx.app.ai.EstimatedFood
 import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.data.AppData
 import com.luxmaxx.app.data.ChatMessage
+import com.luxmaxx.app.data.Equip
 import com.luxmaxx.app.data.FaceCheck
 import com.luxmaxx.app.data.FoodEntry
 import com.luxmaxx.app.data.Looks
@@ -22,6 +23,7 @@ import com.luxmaxx.app.face.FaceAnalyzer
 import com.luxmaxx.app.face.FaceResult
 import com.luxmaxx.app.face.ImageEncoder
 import com.luxmaxx.app.logic.Calculator
+import com.luxmaxx.app.logic.HomeWorkouts
 import com.luxmaxx.app.logic.Program
 import com.luxmaxx.app.logic.Programs
 import com.luxmaxx.app.logic.Progress
@@ -95,7 +97,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun targets(d: AppData = data.value): Targets? = d.profile?.let { Calculator.targets(it, currentWeight(d)) }
 
     fun program(d: AppData = data.value): Program? =
-        d.profile?.let { Programs.forProfile(it.trainingDays, it.experience) }
+        d.profile?.let {
+            val gym = Programs.forProfile(it.trainingDays, it.experience)
+            if (d.trainAtHome) HomeWorkouts.toHome(gym, d.homeEquipment) else gym
+        }
+
+    fun setTrainAtHome(home: Boolean) = mutate { it.copy(trainAtHome = home) }
+    fun toggleEquip(e: Equip) = mutate {
+        it.copy(homeEquipment = if (e in it.homeEquipment) it.homeEquipment - e else it.homeEquipment + e)
+    }
 
     // ---------- Профиль ----------
     fun saveProfile(p: Profile) = mutate {
@@ -118,11 +128,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- Тренировки ----------
     val activeDay = MutableStateFlow<String?>(null)
     val activeSets = MutableStateFlow<List<SetEntry>>(emptyList())
+    /** Замены упражнений в текущей тренировке: плановое название -> фактическое. */
+    val activeSwaps = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    fun startWorkout(day: String) { activeDay.value = day; activeSets.value = emptyList() }
+    fun startWorkout(day: String) { activeDay.value = day; activeSets.value = emptyList(); activeSwaps.value = emptyMap() }
+
+    fun swapExercise(planned: String, replacement: String) {
+        val old = activeSwaps.value[planned] ?: planned
+        // подходы, уже записанные под старым названием, переносим на новое
+        activeSets.update { list -> list.map { if (it.exercise == old) it.copy(exercise = replacement) else it } }
+        activeSwaps.update { if (replacement == planned) it - planned else it + (planned to replacement) }
+    }
     fun addSet(s: SetEntry) { activeSets.update { it + s } }
     fun removeSet(index: Int) { activeSets.update { it.filterIndexed { i, _ -> i != index } } }
-    fun cancelWorkout() { activeDay.value = null; activeSets.value = emptyList() }
+    fun cancelWorkout() { activeDay.value = null; activeSets.value = emptyList(); activeSwaps.value = emptyMap() }
 
     fun finishWorkout() {
         val day = activeDay.value ?: return
@@ -344,6 +363,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             |Сегодня съедено: ${todayFoods.sumOf { it.kcal }} ккал, белок ${todayFoods.sumOf { it.protein }} г
             |Вес (последние записи): ${weights.ifBlank { "нет" }}
             |Программа: ${program(d)?.title ?: "-"}
+            |Где тренируется: ${if (d.trainAtHome) "дома, инвентарь: " + (d.homeEquipment.joinToString { it.title }.ifBlank { "только вес тела" }) else "в зале"}
             |Последние тренировки:
             |${recentWorkouts.ifBlank { "нет" }}
             |Последняя отметка лица: $lastFace

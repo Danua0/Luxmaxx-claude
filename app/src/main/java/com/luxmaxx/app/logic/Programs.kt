@@ -113,9 +113,15 @@ object Programs {
     /** Следующий день программы после последней записанной тренировки. */
     fun nextDay(program: Program, logs: List<WorkoutLog>): WorkoutDay {
         val last = logs.maxByOrNull { it.id } ?: return program.days.first()
-        val idx = program.days.indexOfFirst { it.name == last.dayName }
+        // «Верх 1» и «Верх 1 · Дом» — один и тот же день цикла
+        val base = last.dayName.removeSuffix(" · Дом")
+        val idx = program.days.indexOfFirst { it.name.removeSuffix(" · Дом") == base }
         return program.days[(idx + 1).mod(program.days.size)]
     }
+
+    /** Названия всех зальных упражнений из всех программ — для меню замены. */
+    fun allGymExercises(): List<String> =
+        listOf(2, 4, 6).flatMap { d -> forProfile(d, Experience.ADVANCED).days.flatMap { it.exercises.map { e -> e.name } } }.distinct()
 
     fun volumeKg(log: WorkoutLog) = log.sets.sumOf { it.weight * it.reps }
 }

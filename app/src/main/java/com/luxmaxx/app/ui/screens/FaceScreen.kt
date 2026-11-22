@@ -65,6 +65,7 @@ import com.luxmaxx.app.data.FaceCheck
 import com.luxmaxx.app.data.FaceMetrics
 import com.luxmaxx.app.face.FaceResult
 import com.luxmaxx.app.today
+import com.luxmaxx.app.ui.components.Bullet
 import com.luxmaxx.app.ui.components.FaceMeshPhoto
 import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.HeroBanner
@@ -319,11 +320,11 @@ fun FaceScreen(vm: AppViewModel) {
 
         item {
             SectionCard("Что реально улучшает лицо", icon = Icons.Filled.Lightbulb, accent = Blue) {
-                Text("• Снижение % жира (до ~12–15% у парней) — скулы и челюсть видны лучше всего от этого.")
-                Text("• Сон и меньше соли/алкоголя — главные враги утренних отёков.")
-                Text("• SPF каждый день — защищает от пигментации и раннего старения.")
-                Text("• Высыпания: умывание после зала, не трогать лицо руками, при сильном акне — к дерматологу (ретиноиды, азелаиновая кислота).")
-                Text("• Осанка и тренировка шеи/трапеций визуально делают фигуру и лицо мощнее.")
+                Bullet("Снижение % жира (до ~12–15% у парней) — скулы и челюсть видны лучше всего от этого.", Blue)
+                Bullet("Сон и меньше соли/алкоголя — главные враги утренних отёков.", Blue)
+                Bullet("SPF каждый день — защищает от пигментации и раннего старения.", Blue)
+                Bullet("Высыпания: умывание после зала, не трогать лицо руками, при сильном акне — к дерматологу (ретиноиды, азелаиновая кислота).", Blue)
+                Bullet("Осанка и тренировка шеи/трапеций визуально делают фигуру и лицо мощнее.", Blue)
             }
         }
         item { Text("", Modifier.padding(bottom = 8.dp)) }

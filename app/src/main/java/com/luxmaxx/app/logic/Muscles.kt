@@ -24,6 +24,25 @@ object Muscles {
 
     /** Порядок важен: побеждает первое совпадение. */
     private val rules: List<Pair<String, Map<Muscle, Float>>> = listOf(
+        // домашние упражнения (специфичные — раньше общих)
+        "алмазные" to mapOf(Muscle.TRICEPS to 1f, Muscle.CHEST to 0.5f),
+        "обратные отжимания" to mapOf(Muscle.TRICEPS to 1f, Muscle.SHOULDERS to 0.3f),
+        "пайк" to mapOf(Muscle.SHOULDERS to 1f, Muscle.TRICEPS to 0.5f),
+        "в стойке" to mapOf(Muscle.SHOULDERS to 1f, Muscle.TRICEPS to 0.6f, Muscle.TRAPS to 0.3f),
+        "жим гантелей стоя" to mapOf(Muscle.SHOULDERS to 1f, Muscle.TRICEPS to 0.5f),
+        "лёжа на полу" to mapOf(Muscle.CHEST to 1f, Muscle.TRICEPS to 0.5f),
+        "гоблет" to mapOf(Muscle.QUADS to 1f, Muscle.GLUTES to 0.6f),
+        "пистолетик" to mapOf(Muscle.QUADS to 1f, Muscle.GLUTES to 0.6f),
+        "сисси" to mapOf(Muscle.QUADS to 1f),
+        "зашагивания" to mapOf(Muscle.QUADS to 1f, Muscle.GLUTES to 0.7f),
+        "бёрпи" to mapOf(Muscle.QUADS to 0.6f, Muscle.CHEST to 0.5f, Muscle.SHOULDERS to 0.3f),
+        "скандинавские" to mapOf(Muscle.HAMS to 1f),
+        "ягодичный мост" to mapOf(Muscle.GLUTES to 1f, Muscle.HAMS to 0.4f),
+        "good morning" to mapOf(Muscle.HAMS to 1f, Muscle.LOWER_BACK to 0.7f, Muscle.GLUTES to 0.5f),
+        "y-t-w" to mapOf(Muscle.TRAPS to 0.8f, Muscle.SHOULDERS to 0.7f),
+        "разведения" to mapOf(Muscle.SHOULDERS to 1f, Muscle.TRAPS to 0.4f),
+        "велосипед" to mapOf(Muscle.ABS to 1f),
+        "сгибания рук" to mapOf(Muscle.BICEPS to 1f, Muscle.FOREARMS to 0.4f),
         "подъёмы ног" to mapOf(Muscle.ABS to 1f, Muscle.FOREARMS to 0.3f),
         "подъёмы на носки" to mapOf(Muscle.CALVES to 1f),
         "разгибания ног" to mapOf(Muscle.QUADS to 1f),

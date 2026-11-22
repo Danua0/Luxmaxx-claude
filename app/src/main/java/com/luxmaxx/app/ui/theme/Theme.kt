@@ -1,11 +1,14 @@
 package com.luxmaxx.app.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -103,5 +106,12 @@ private val Shape = Shapes(
 
 @Composable
 fun LuxTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = Scheme, typography = Type, shapes = Shape, content = content)
+    MaterialTheme(colorScheme = Scheme, typography = Type, shapes = Shape) {
+        // Цвет текста по умолчанию — светлый. Без этого Text без явного цвета рисуется чёрным на тёмном фоне.
+        CompositionLocalProvider(
+            LocalContentColor provides TextHi,
+            LocalTextStyle provides Type.bodyMedium,
+            content = content,
+        )
+    }
 }

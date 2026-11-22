@@ -384,3 +384,12 @@ fun GoldChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Un
         ) { label() }
     }
 }
+
+/** Пункт списка с цветным маркером. */
+@Composable
+fun Bullet(text: String, color: Color = Gold) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(Modifier.padding(top = 8.dp, end = 10.dp).size(6.dp).clip(CircleShape).background(color))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = TextHi)
+    }
+}

@@ -1,6 +1,7 @@
 package com.luxmaxx.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,14 +12,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -26,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.House
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
@@ -50,10 +55,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
+import com.luxmaxx.app.data.Equip
 import com.luxmaxx.app.data.SetEntry
+import com.luxmaxx.app.logic.HomeWorkouts
 import com.luxmaxx.app.logic.Muscles
 import com.luxmaxx.app.logic.PlannedExercise
 import com.luxmaxx.app.logic.Programs
+import com.luxmaxx.app.ui.components.Bullet
+import com.luxmaxx.app.ui.components.GoldChip
 import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.HeroBanner
 import com.luxmaxx.app.ui.components.IconBadge
@@ -71,6 +80,7 @@ import com.luxmaxx.app.ui.theme.GoldGradient
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Surface1
+import com.luxmaxx.app.ui.theme.Surface2
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
 import com.luxmaxx.app.ui.theme.Violet
@@ -103,6 +113,8 @@ fun WorkoutScreen(vm: AppViewModel) {
                 }
             }
         }
+
+        item { PlaceSelector(vm, d.trainAtHome, d.homeEquipment, Modifier.enter(1)) }
 
         itemsIndexed(program.days) { i, wd ->
             val isNext = wd == next
@@ -199,6 +211,8 @@ fun WorkoutScreen(vm: AppViewModel) {
 private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<PlannedExercise>) {
     val d by vm.data.collectAsStateWithLifecycle()
     val sets by vm.activeSets.collectAsStateWithLifecycle()
+    val swaps by vm.activeSwaps.collectAsStateWithLifecycle()
+    var swapFor by remember { mutableStateOf<String?>(null) }
     var restLeft by remember { mutableIntStateOf(0) }
     var restTotal by remember { mutableIntStateOf(1) }
     LaunchedEffect(restLeft) {
@@ -246,10 +260,12 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
                 }
             }
         }
-        items(exercises, key = { it.name }) { ex ->
+        items(exercises, key = { it.name }) { planned ->
+            val ex = planned.copy(name = swaps[planned.name] ?: planned.name)
+            val swapped = ex.name != planned.name
             val last = Programs.lastSets(d.workouts, ex.name)
             val done = sets.withIndex().filter { it.value.exercise == ex.name }
-            var w by remember { mutableStateOf(last.maxOfOrNull { it.weight }?.fmt()?.replace(',', '.') ?: "") }
+            var w by remember(ex.name) { mutableStateOf(last.maxOfOrNull { it.weight }?.fmt()?.replace(',', '.') ?: "") }
             var r by remember { mutableStateOf("") }
             val complete = done.size >= ex.sets
             SectionCard(ex.name, icon = if (complete) Icons.Filled.Check else Icons.Filled.FitnessCenter,
@@ -258,6 +274,10 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
                     Muscles.primary(ex.name)?.let { Pill("🎯 ${it.title}", Violet) }
                     Pill("${ex.sets} × ${ex.repMin}–${ex.repMax}", Blue)
                     Pill("${done.size}/${ex.sets} готово", if (complete) Green else TextLo)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Pill("⇄ Заменить", Gold, Modifier.clickable { swapFor = planned.name })
+                    if (swapped) Text("вместо: ${planned.name}", style = MaterialTheme.typography.labelMedium, color = TextLo, maxLines = 1)
                 }
                 if (ex.tip.isNotBlank()) Text("💡 ${ex.tip}", style = MaterialTheme.typography.bodySmall, color = TextLo)
                 Text(Programs.progressionHint(ex, last), style = MaterialTheme.typography.bodySmall, color = Gold)
@@ -295,5 +315,106 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
                 modifier = Modifier.fillMaxWidth(), icon = Icons.Filled.Check)
             Spacer(Modifier.height(16.dp))
         }
+    }
+
+    swapFor?.let { plannedName ->
+        val current = swaps[plannedName] ?: plannedName
+        SwapDialog(
+            current = current,
+            planned = plannedName,
+            equipment = d.homeEquipment,
+            onPick = { vm.swapExercise(plannedName, it); swapFor = null },
+            onDismiss = { swapFor = null },
+        )
+    }
+}
+
+
+/** Переключатель «Зал / Дом» и выбор домашнего инвентаря. */
+@Composable
+private fun PlaceSelector(vm: AppViewModel, home: Boolean, equipment: Set<Equip>, modifier: Modifier = Modifier) {
+    SectionCard("Где тренируешься", icon = if (home) Icons.Filled.House else Icons.Filled.FitnessCenter,
+        accent = if (home) Green else Gold, modifier = modifier) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Surface1).padding(4.dp),
+        ) {
+            listOf(false to "🏋️  Зал", true to "🏠  Дом").forEach { (h, label) ->
+                val sel = h == home
+                Box(
+                    Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (sel) GoldGradient else androidx.compose.ui.graphics.SolidColor(Color.Transparent))
+                        .clickable { vm.setTrainAtHome(h) }.padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) Color(0xFF1C1200) else TextLo)
+                }
+            }
+        }
+        if (home) {
+            Text("Что есть дома? Без инвентаря тоже можно — подберу упражнения с весом тела.",
+                style = MaterialTheme.typography.bodySmall, color = TextLo)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Equip.entries.forEach { e ->
+                    GoldChip(e in equipment, { vm.toggleEquip(e) }) { Text("${e.emoji} ${e.title}") }
+                }
+            }
+            Bullet("+1 подход в каждом упражнении и добивки в конце — дома объём важнее веса", Green)
+            Bullet("Опускай вес за 3 секунды и делай паузу внизу — так даже лёгкая нагрузка растит мышцы", Green)
+            Bullet("Последний подход — до отказа или за 1–2 повтора до него", Green)
+        } else {
+            Text("Во время тренировки любое упражнение можно заменить кнопкой «⇄ Заменить» — например, если тренажёр занят.",
+                style = MaterialTheme.typography.bodySmall, color = TextLo)
+        }
+    }
+}
+
+/** Меню замены упражнения: домашние и зальные варианты на ту же мышцу. */
+@Composable
+private fun SwapDialog(current: String, planned: String, equipment: Set<Equip>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    val (home, gym) = HomeWorkouts.swapOptions(current, equipment, Programs.allGymExercises())
+    val muscle = Muscles.primary(current)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Surface1,
+        title = {
+            Column {
+                Text("Замена упражнения", style = MaterialTheme.typography.titleLarge, color = TextHi)
+                Text("${current}${muscle?.let { " · ${it.title}" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = TextLo)
+            }
+        },
+        text = {
+            Column(
+                Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (current != planned) SwapOption("↩  Вернуть: $planned", "по плану", Gold) { onPick(planned) }
+                if (home.isNotEmpty()) Text("🏠 ДОМА", style = MaterialTheme.typography.labelSmall, color = Green)
+                home.forEach { alt ->
+                    SwapOption(alt.name, (alt.equip?.let { "${it.emoji} ${it.title}" } ?: "вес тела") + " · ${alt.repMin}–${alt.repMax} повт.", Green) {
+                        onPick(alt.name)
+                    }
+                }
+                if (gym.isNotEmpty()) Text("🏋️ В ЗАЛЕ", style = MaterialTheme.typography.labelSmall, color = Gold)
+                gym.forEach { g -> SwapOption(g, "зал", Gold) { onPick(g) } }
+                if (home.isEmpty() && gym.isEmpty()) Text("Нет подходящих замен для этого упражнения", color = TextLo)
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Закрыть", color = Gold) } },
+    )
+}
+
+@Composable
+private fun SwapOption(title: String, subtitle: String, color: Color, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface2)
+            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = TextHi)
+            Text(subtitle, style = MaterialTheme.typography.labelMedium, color = TextLo)
+        }
+        Text("⇄", color = color, style = MaterialTheme.typography.titleLarge)
     }
 }

@@ -51,6 +51,7 @@ import com.luxmaxx.app.ai.EstimatedFood
 import com.luxmaxx.app.today
 import com.luxmaxx.app.ui.components.AnimatedNumber
 import com.luxmaxx.app.ui.components.BarChart
+import com.luxmaxx.app.ui.components.Bullet
 import com.luxmaxx.app.ui.components.ConcentricRings
 import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.HeroBanner
@@ -236,10 +237,10 @@ fun NutritionScreen(vm: AppViewModel) {
         }
         item {
             SectionCard("Советы для набора", icon = Icons.Filled.Lightbulb, accent = Blue) {
-                Text("• Белок на каждый приём пищи: 30–40 г, 4–5 раз в день.")
-                Text("• Не лезет еда? Пей калории: молоко, банан, овсянка, арахисовая паста в блендере = 800+ ккал.")
-                Text("• Креатин моногидрат 3–5 г в день — самая изученная и безопасная добавка для силы и массы.")
-                Text("• Меньше соли и сахара вечером — утром лицо будет менее отёчным.")
+                Bullet("Белок на каждый приём пищи: 30–40 г, 4–5 раз в день.", Blue)
+                Bullet("Не лезет еда? Пей калории: молоко, банан, овсянка, арахисовая паста в блендере = 800+ ккал.", Blue)
+                Bullet("Креатин моногидрат 3–5 г в день — самая изученная и безопасная добавка для силы и массы.", Blue)
+                Bullet("Меньше соли и сахара вечером — утром лицо будет менее отёчным.", Blue)
             }
         }
         item { Text("", Modifier.padding(bottom = 8.dp)) }
