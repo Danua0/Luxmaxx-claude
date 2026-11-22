@@ -164,7 +164,7 @@ fun HomeScreen(vm: AppViewModel, onProfile: () -> Unit, onNavigate: (String) -> 
                     "Темп", rate?.let { (if (it >= 0) "+" else "") + "%.2f".format(it) } ?: "—", Modifier.weight(1f), "кг/нед",
                     accent = when {
                         rate == null -> TextLo
-                        rate / weight * 100 in 0.1..0.6 -> Green
+                        (rate / weight * 100) in 0.1..0.6 -> Green
                         else -> Red
                     },
                 )

@@ -76,6 +76,7 @@ import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Amber
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.BorderGradient
+import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Stroke
