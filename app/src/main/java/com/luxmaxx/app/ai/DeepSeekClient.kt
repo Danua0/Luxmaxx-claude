@@ -30,8 +30,10 @@ object DeepSeekClient {
         jsonMode: Boolean = false,
         model: String = "deepseek-chat",
         imageJpegBase64: String? = null,   // прикрепляется к последнему сообщению пользователя
+        images: List<String> = emptyList(), // несколько фото (base64 JPEG) — тоже к последнему сообщению
     ): String = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) throw DeepSeekException("Добавь API-ключ DeepSeek в Профиле")
+        val allImages = listOfNotNull(imageJpegBase64) + images
         val body = buildJsonObject {
             put("model", model.trim())
             put("temperature", temperature)
@@ -39,13 +41,15 @@ object DeepSeekClient {
                 messages.forEachIndexed { i, m ->
                     add(buildJsonObject {
                         put("role", m.role)
-                        if (imageJpegBase64 != null && i == messages.lastIndex) {
-                            // Формат OpenAI-совместимого API: массив частей текст + картинка
+                        if (allImages.isNotEmpty() && i == messages.lastIndex) {
+                            // Формат OpenAI-совместимого API: массив частей картинки + текст
                             put("content", buildJsonArray {
-                                add(buildJsonObject {
-                                    put("type", "image_url")
-                                    put("image_url", buildJsonObject { put("url", "data:image/jpeg;base64,$imageJpegBase64") })
-                                })
+                                allImages.forEach { img ->
+                                    add(buildJsonObject {
+                                        put("type", "image_url")
+                                        put("image_url", buildJsonObject { put("url", "data:image/jpeg;base64,$img") })
+                                    })
+                                }
                                 add(buildJsonObject { put("type", "text"); put("text", m.content) })
                             })
                         } else put("content", m.content)
@@ -70,7 +74,7 @@ object DeepSeekClient {
             if (code !in 200..299) {
                 throw DeepSeekException(
                     when (code) {
-                        400 -> if (imageJpegBase64 != null)
+                        400 -> if (allImages.isNotEmpty())
                             "DeepSeek не принял фото (400). Проверь модель для фото в Профиле. Ответ: ${text.take(200)}"
                         else "Ошибка запроса (400): ${text.take(200)}"
                         401 -> "Неверный API-ключ DeepSeek"

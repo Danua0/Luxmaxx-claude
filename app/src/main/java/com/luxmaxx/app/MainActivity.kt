@@ -38,7 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.luxmaxx.app.ui.components.ScreenBackground
 import com.luxmaxx.app.ui.screens.CoachScreen
-import com.luxmaxx.app.ui.screens.FaceScreen
+import com.luxmaxx.app.ui.screens.LooksScreen
 import com.luxmaxx.app.ui.screens.HomeScreen
 import com.luxmaxx.app.ui.screens.NutritionScreen
 import com.luxmaxx.app.ui.screens.ProfileScreen
@@ -65,7 +65,7 @@ private val tabs = listOf(
     Tab("home", "Главная", Icons.Filled.Home),
     Tab("workout", "Зал", Icons.Filled.FitnessCenter),
     Tab("food", "Питание", Icons.Filled.Restaurant),
-    Tab("face", "Лицо", Icons.Filled.Face),
+    Tab("face", "Образ", Icons.Filled.Face),
     Tab("coach", "AI", Icons.Filled.SmartToy),
 )
 
@@ -125,7 +125,7 @@ fun App(vm: AppViewModel = viewModel()) {
             composable("home") { HomeScreen(vm, onProfile = { nav.navigate("profile") }, onNavigate = ::go) }
             composable("workout") { WorkoutScreen(vm) }
             composable("food") { NutritionScreen(vm) }
-            composable("face") { FaceScreen(vm) }
+            composable("face") { LooksScreen(vm) }
             composable("coach") { CoachScreen(vm, onProfile = { nav.navigate("profile") }) }
             composable("profile") { ProfileScreen(vm, firstRun = false, onDone = { nav.popBackStack() }) }
         }

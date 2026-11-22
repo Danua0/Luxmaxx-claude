@@ -83,6 +83,26 @@ data class FaceCheck(
 data class ChatMessage(val role: String, val content: String)
 
 @Serializable
+data class Looks(
+    // Кумир
+    val idolName: String = "",
+    val idolPhotoPath: String? = null,
+    val idolAnalysis: String? = null,
+    // Волосы
+    val hairType: String = "Прямые",
+    val hairLength: String = "Короткие",
+    val hairIssues: List<String> = emptyList(),
+    val hairPhotoPath: String? = null,
+    val hairAdvice: String? = null,
+    // Одежда
+    val styleGoal: String = "",
+    val budget: String = "Средний",
+    val outfitPhotoPath: String? = null,
+    val outfitAdvice: String? = null,
+    val wardrobeAdvice: String? = null,
+)
+
+@Serializable
 data class AppData(
     val profile: Profile? = null,
     val weights: List<WeightEntry> = emptyList(),
@@ -94,4 +114,5 @@ data class AppData(
     val textModel: String = "deepseek-chat",
     val visionModel: String = "deepseek-flash",
     val faceRoutineDone: Map<String, List<String>> = emptyMap(), // дата -> выполненные пункты ухода
+    val looks: Looks = Looks(),
 )

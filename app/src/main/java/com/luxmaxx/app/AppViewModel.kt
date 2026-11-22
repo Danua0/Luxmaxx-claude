@@ -11,6 +11,7 @@ import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.data.AppData
 import com.luxmaxx.app.data.ChatMessage
 import com.luxmaxx.app.data.FaceCheck
+import com.luxmaxx.app.data.Looks
 import com.luxmaxx.app.data.FoodEntry
 import com.luxmaxx.app.data.Profile
 import com.luxmaxx.app.data.Repository
@@ -107,13 +108,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- Лицо ----------
-    fun newFacePhotoFile(): File {
+    fun newFacePhotoFile(prefix: String = "face"): File {
         val dir = File(getApplication<Application>().filesDir, "faces").apply { mkdirs() }
-        return File(dir, "face_${System.currentTimeMillis()}.jpg")
+        return File(dir, "${prefix}_${System.currentTimeMillis()}.jpg")
     }
 
-    fun importFacePhoto(uri: Uri): File? = try {
-        val f = newFacePhotoFile()
+    fun importFacePhoto(uri: Uri, prefix: String = "face"): File? = try {
+        val f = newFacePhotoFile(prefix)
         getApplication<Application>().contentResolver.openInputStream(uri)!!.use { inp ->
             f.outputStream().use { inp.copyTo(it) }
         }
@@ -183,6 +184,88 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             (m?.let { ", симметрия ${it.symmetry}%, индекс ширины лица ${it.widthIndex}" } ?: "")
     }
 
+    // ---------- Образ: кумир, волосы, одежда ----------
+    fun updateLooks(block: (Looks) -> Looks) = mutate { it.copy(looks = block(it.looks)) }
+
+    /** Заменяет фото в разделе «Образ», удаляя старый файл. */
+    fun setLooksPhoto(old: String?, new: String, block: (Looks, String) -> Looks) {
+        if (old != null && old != new) File(old).delete()
+        updateLooks { block(it, new) }
+    }
+
+    private fun latestFacePhoto(): File? = data.value.faceChecks.sortedByDescending { it.id }
+        .firstNotNullOfOrNull { c -> c.photoPath?.let { File(it) }?.takeIf { it.exists() } }
+
+    private suspend fun photos(vararg paths: String?): List<String> =
+        paths.mapNotNull { p -> p?.let { File(it) }?.takeIf { it.exists() } }.map { ImageEncoder.toJpegBase64(it) }
+
+    private suspend fun askVision(prompt: String, images: List<String>): String {
+        val d = data.value
+        return DeepSeekClient.chat(
+            d.apiKey, listOf(ChatMessage("system", systemPrompt()), ChatMessage("user", prompt)),
+            temperature = 0.5, model = if (images.isEmpty()) d.textModel else d.visionModel, images = images,
+        )
+    }
+
+    fun analyzeIdol() = ai {
+        val l = data.value.looks
+        val idolImg = photos(l.idolPhotoPath)
+        val me = latestFacePhoto()
+        val meImg = photos(me?.absolutePath)
+        val prompt = """Мой кумир / ориентир по внешности: ${l.idolName.ifBlank { "без имени" }}.
+            |${if (idolImg.isNotEmpty()) "Первое фото — кумир." else "Фото кумира нет."}
+            |${if (meImg.isNotEmpty()) "Второе фото — я сейчас." else "Моего фото нет, ориентируйся на мой профиль."}
+            |
+            |Помоги мне приблизиться к этому образу РЕАЛИСТИЧНО. Разбери по пунктам:
+            |1. 💪 Телосложение: какой у него примерно % жира и какие мышцы доминируют; что мне качать в приоритете, какой вес/состав тела целиться и за какой срок это реально.
+            |2. 🍽 Питание: нужно ли мне сейчас набирать или сначала подсушиться, чтобы прийти к такому виду.
+            |3. 💇 Волосы и уход: стрижка, борода/щетина, брови, кожа — что перенять.
+            |4. 👕 Стиль: как он одевается и что из этого подойдёт мне.
+            |5. ⚖️ Честно: что зависит от генетики и чего не стоит ждать — без самоуничижения, фокус на том, что можно изменить.
+            |Не оценивай «красоту» по шкале, будь конкретным и мотивирующим.""".trimMargin()
+        val answer = askVision(prompt, idolImg + meImg)
+        updateLooks { it.copy(idolAnalysis = answer) }
+    }
+
+    fun analyzeHair() = ai {
+        val l = data.value.looks
+        val img = photos(l.hairPhotoPath ?: latestFacePhoto()?.absolutePath)
+        val prompt = """Помоги с волосами. Тип: ${l.hairType}, длина: ${l.hairLength}.
+            |Проблемы: ${l.hairIssues.ifEmpty { listOf("нет") }.joinToString()}.
+            |${if (img.isNotEmpty()) "На фото — я. Определи форму лица и текущее состояние волос." else ""}
+            |${if (l.idolName.isNotBlank()) "Мой ориентир по внешности: ${l.idolName}." else ""}
+            |Дай:
+            |1. Какие 2–3 стрижки подойдут к моей форме лица и как попросить барбера (конкретными словами).
+            |2. Уход: как часто мыть, какой шампунь/кондиционер (по составу), укладка и средства.
+            |3. Решение моих проблем по пунктам. Если есть выпадение — скажи честно, когда пора к трихологу/дерматологу и какие методы научно доказаны.
+            |4. Борода/щетина и брови — если уместно.""".trimMargin()
+        val answer = askVision(prompt, img)
+        updateLooks { it.copy(hairAdvice = answer) }
+    }
+
+    fun analyzeOutfit() = ai {
+        val l = data.value.looks
+        val img = photos(l.outfitPhotoPath)
+        if (img.isEmpty()) throw DeepSeekException("Сначала добавь фото образа")
+        val prompt = """На фото — мой образ (одежда). Цель стиля: ${l.styleGoal.ifBlank { "выглядеть мужественно и аккуратно" }}.
+            |${if (l.idolName.isNotBlank()) "Ориентир: ${l.idolName}." else ""}
+            |Разбери: посадка по фигуре (плечи, длина, ширина), цвета и сочетания, обувь, общее впечатление.
+            |Что поменять, чтобы фигура выглядела мощнее и спортивнее? 3–5 конкретных правок по приоритету.""".trimMargin()
+        val answer = askVision(prompt, img)
+        updateLooks { it.copy(outfitAdvice = answer) }
+    }
+
+    fun wardrobePlan() = ai {
+        val l = data.value.looks
+        val prompt = """Составь мне базовый капсульный гардероб. Цель стиля: ${l.styleGoal.ifBlank { "универсальный, мужественный" }}.
+            |Бюджет: ${l.budget}. ${if (l.idolName.isNotBlank()) "Ориентир: ${l.idolName}." else ""}
+            |Учитывай мой рост и вес из профиля и то, что я набираю мышечную массу.
+            |Дай: список 12–15 вещей (с цветами и фасонами), 5 готовых сочетаний, на что смотреть при примерке для спортивной фигуры,
+            |и примерный бюджет. Коротко, по пунктам.""".trimMargin()
+        val answer = askVision(prompt, emptyList())
+        updateLooks { it.copy(wardrobeAdvice = answer) }
+    }
+
     // ---------- AI-тренер ----------
     fun sendChat(text: String) {
         if (text.isBlank()) return
@@ -222,7 +305,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             |Программа: ${program(d)?.title ?: "-"}
             |Последние тренировки:
             |${recentWorkouts.ifBlank { "нет" }}
-            |Последняя отметка лица: $lastFace""".trimMargin()
+            |Последняя отметка лица: $lastFace
+            |Ориентир по внешности (кумир): ${d.looks.idolName.ifBlank { "не задан" }}${d.looks.idolAnalysis?.let { "\nКраткий разбор кумира: ${it.take(700)}" } ?: ""}
+            |Волосы: ${d.looks.hairType}, ${d.looks.hairLength}, проблемы: ${d.looks.hairIssues.ifEmpty { listOf("нет") }.joinToString()}
+            |Цель по стилю: ${d.looks.styleGoal.ifBlank { "не задана" }}""".trimMargin()
     }
 
     private fun ai(block: suspend () -> Unit) {
