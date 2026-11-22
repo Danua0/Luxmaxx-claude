@@ -91,5 +91,7 @@ data class AppData(
     val faceChecks: List<FaceCheck> = emptyList(),
     val chat: List<ChatMessage> = emptyList(),
     val apiKey: String = "",
+    val textModel: String = "deepseek-chat",
+    val visionModel: String = "deepseek-flash",
     val faceRoutineDone: Map<String, List<String>> = emptyMap(), // дата -> выполненные пункты ухода
 )

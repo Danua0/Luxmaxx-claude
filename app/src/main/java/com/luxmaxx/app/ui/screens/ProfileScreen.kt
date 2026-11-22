@@ -53,6 +53,8 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
     var days by remember { mutableIntStateOf(existing.trainingDays) }
     var exp by remember { mutableStateOf(existing.experience) }
     var key by remember { mutableStateOf(vm.data.value.apiKey) }
+    var textModel by remember { mutableStateOf(vm.data.value.textModel) }
+    var visionModel by remember { mutableStateOf(vm.data.value.visionModel) }
     val ctx = LocalContext.current
 
     val parsed = run {
@@ -114,6 +116,14 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(key, { key = it }, label = { Text("sk-...") }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(textModel, { textModel = it }, label = { Text("Модель для чата") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(visionModel, { visionModel = it }, label = { Text("Модель для фото") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                }
+                Text("Если DeepSeek переименует модели — просто впиши новое название из их документации.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = {
                     ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.deepseek.com/api_keys")))
                 }) { Text("Открыть сайт DeepSeek") }
@@ -132,6 +142,7 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
                 onClick = {
                     parsed?.let { vm.saveProfile(it) }
                     vm.setApiKey(key)
+                    vm.setModels(textModel, visionModel)
                     onDone()
                 },
                 enabled = parsed != null,

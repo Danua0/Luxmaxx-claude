@@ -17,6 +17,8 @@ import com.luxmaxx.app.data.SetEntry
 import com.luxmaxx.app.data.WeightEntry
 import com.luxmaxx.app.data.WorkoutLog
 import com.luxmaxx.app.face.FaceAnalyzer
+import com.luxmaxx.app.face.ImageEncoder
+import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.face.FaceResult
 import com.luxmaxx.app.logic.Calculator
 import com.luxmaxx.app.logic.Program
@@ -63,6 +65,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setApiKey(k: String) = mutate { it.copy(apiKey = k.trim()) }
 
+    fun setModels(text: String, vision: String) = mutate {
+        it.copy(textModel = text.trim().ifBlank { "deepseek-chat" }, visionModel = vision.trim().ifBlank { "deepseek-flash" })
+    }
+
     // ---------- Вес ----------
     fun addWeight(kg: Double) = mutate {
         it.copy(weights = it.weights.filterNot { w -> w.date == today() } + WeightEntry(today(), kg))
@@ -97,7 +103,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteFood(id: Long) = mutate { it.copy(foods = it.foods.filterNot { f -> f.id == id }) }
 
     fun estimateFood(text: String, onResult: (List<EstimatedFood>) -> Unit) = ai {
-        onResult(DeepSeekClient.estimateFood(data.value.apiKey, text))
+        onResult(DeepSeekClient.estimateFood(data.value.apiKey, data.value.textModel, text))
     }
 
     // ---------- Лицо ----------
@@ -116,6 +122,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun analyzeFace(file: File): FaceResult =
         FaceAnalyzer.analyze(getApplication<Application>(), Uri.fromFile(file))
+
+    /** AI смотрит свежее фото и выставляет оценки (пользователь потом может поправить). */
+    fun analyzeFacePhotoAi(file: File, notes: String, onResult: (FaceAiResult) -> Unit) = ai {
+        val d = data.value
+        val history = d.faceChecks.sortedBy { it.date }.takeLast(10).joinToString("\n") { faceLine(it) }
+        val res = DeepSeekClient.analyzeFacePhoto(
+            d.apiKey, d.visionModel, systemPrompt(),
+            "История моих прошлых отметок (старые сверху):\n${history.ifBlank { "нет" }}\nЗаметки сегодня: ${notes.ifBlank { "нет" }}",
+            ImageEncoder.toJpegBase64(file),
+        )
+        onResult(res)
+    }
 
     fun saveFaceCheck(check: FaceCheck) = mutate {
         it.copy(faceChecks = it.faceChecks.filterNot { c -> c.id == check.id } + check)
@@ -145,7 +163,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             |
             |Проанализируй динамику и дай конкретный план на ближайшие 2 недели: уход за кожей (утро/вечер, активные компоненты),
             |сон, вода, соль/сахар/молочка, отёки, тренировки и питание с учётом набора массы. Коротко, по пунктам.""".trimMargin()
-        val answer = DeepSeekClient.chat(d.apiKey, listOf(ChatMessage("system", systemPrompt()), ChatMessage("user", prompt)))
+        val photo = check.photoPath?.let { File(it) }?.takeIf { it.exists() }
+        val answer = if (photo != null) {
+            // Есть фото — отправляем его модели с компьютерным зрением
+            DeepSeekClient.analyzeFacePhoto(
+                d.apiKey, d.visionModel, systemPrompt(),
+                "История отметок:\n$history\nЗаметки сегодня: ${check.notes.ifBlank { "нет" }}",
+                ImageEncoder.toJpegBase64(photo),
+            ).asText()
+        } else {
+            DeepSeekClient.chat(d.apiKey, listOf(ChatMessage("system", systemPrompt()), ChatMessage("user", prompt)), model = d.textModel)
+        }
         saveFaceCheck(check.copy(aiAdvice = answer))
     }
 
@@ -161,7 +189,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mutate { it.copy(chat = it.chat + ChatMessage("user", text.trim())) }
         ai {
             val history = data.value.chat.takeLast(20)
-            val answer = DeepSeekClient.chat(data.value.apiKey, listOf(ChatMessage("system", systemPrompt())) + history)
+            val answer = DeepSeekClient.chat(data.value.apiKey, listOf(ChatMessage("system", systemPrompt())) + history,
+                model = data.value.textModel)
             mutate { it.copy(chat = it.chat + ChatMessage("assistant", answer)) }
         }
     }

@@ -28,14 +28,28 @@ object DeepSeekClient {
         messages: List<ChatMessage>,
         temperature: Double = 0.7,
         jsonMode: Boolean = false,
+        model: String = "deepseek-chat",
+        imageJpegBase64: String? = null,   // прикрепляется к последнему сообщению пользователя
     ): String = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) throw DeepSeekException("Добавь API-ключ DeepSeek в Профиле")
         val body = buildJsonObject {
-            put("model", "deepseek-chat")
+            put("model", model.trim())
             put("temperature", temperature)
             put("messages", buildJsonArray {
-                messages.forEach { m ->
-                    add(buildJsonObject { put("role", m.role); put("content", m.content) })
+                messages.forEachIndexed { i, m ->
+                    add(buildJsonObject {
+                        put("role", m.role)
+                        if (imageJpegBase64 != null && i == messages.lastIndex) {
+                            // Формат OpenAI-совместимого API: массив частей текст + картинка
+                            put("content", buildJsonArray {
+                                add(buildJsonObject {
+                                    put("type", "image_url")
+                                    put("image_url", buildJsonObject { put("url", "data:image/jpeg;base64,$imageJpegBase64") })
+                                })
+                                add(buildJsonObject { put("type", "text"); put("text", m.content) })
+                            })
+                        } else put("content", m.content)
+                    })
                 }
             })
             if (jsonMode) put("response_format", buildJsonObject { put("type", "json_object") })
@@ -56,9 +70,13 @@ object DeepSeekClient {
             if (code !in 200..299) {
                 throw DeepSeekException(
                     when (code) {
+                        400 -> if (imageJpegBase64 != null)
+                            "DeepSeek не принял фото (400). Проверь модель для фото в Профиле. Ответ: ${text.take(200)}"
+                        else "Ошибка запроса (400): ${text.take(200)}"
                         401 -> "Неверный API-ключ DeepSeek"
                         402 -> "На балансе DeepSeek закончились деньги"
                         429 -> "Слишком много запросов, подожди немного"
+                        404 -> "Модель «$model» не найдена — поменяй название модели в Профиле"
                         else -> "Ошибка DeepSeek ($code): ${text.take(200)}"
                     }
                 )
@@ -76,11 +94,11 @@ object DeepSeekClient {
     }
 
     /** Оценка КБЖУ по описанию еды. Возвращает список позиций. */
-    suspend fun estimateFood(apiKey: String, description: String): List<EstimatedFood> {
+    suspend fun estimateFood(apiKey: String, model: String, description: String): List<EstimatedFood> {
         val sys = """Ты нутрициолог. Пользователь описывает, что съел. Оцени калории и БЖУ каждой позиции.
             |Ответь ТОЛЬКО JSON вида {"items":[{"name":"...","kcal":0,"protein":0,"carbs":0,"fat":0}]}.
             |Если вес не указан — бери типичную порцию и укажи её в name.""".trimMargin()
-        val raw = chat(apiKey, listOf(ChatMessage("system", sys), ChatMessage("user", description)), 0.2, jsonMode = true)
+        val raw = chat(apiKey, listOf(ChatMessage("system", sys), ChatMessage("user", description)), 0.2, jsonMode = true, model = model)
         return try {
             val items = json.parseToJsonElement(raw).jsonObject["items"] as JsonArray
             items.map {
@@ -96,8 +114,49 @@ object DeepSeekClient {
         }
     }
 
+    /** Анализ фото лица. Возвращает оценки и текстовый разбор. */
+    suspend fun analyzeFacePhoto(
+        apiKey: String, model: String, system: String, context: String, imageJpegBase64: String,
+    ): FaceAiResult {
+        val prompt = """$context
+            |
+            |На фото — моё лицо сегодня. Внимательно рассмотри кожу и лицо и ответь ТОЛЬКО JSON:
+            |{"skin": 1-10 (общее состояние кожи, 10 — идеально),
+            | "acne": 0-10 (высыпания, 0 — нет),
+            | "puffiness": 0-10 (отёчность, 0 — нет),
+            | "observations": "что конкретно видишь: зоны высыпаний, жирность/сухость, покраснения, тёмные круги, отёки, текстура",
+            | "advice": "план на 2 недели по пунктам: уход утро/вечер с активными компонентами, сон, питание, вода, что убрать"}
+            |Пиши observations и advice на русском. Будь честным, но тактичным, без оценок «красоты».""".trimMargin()
+        val raw = chat(apiKey, listOf(ChatMessage("system", system), ChatMessage("user", prompt)),
+            temperature = 0.3, model = model, imageJpegBase64 = imageJpegBase64)
+        val start = raw.indexOf('{'); val end = raw.lastIndexOf('}')
+        return try {
+            val o = json.parseToJsonElement(raw.substring(start, end + 1)).jsonObject
+            FaceAiResult(
+                skin = o.num("skin").coerceIn(1, 10),
+                acne = o.num("acne").coerceIn(0, 10),
+                puffiness = o.num("puffiness").coerceIn(0, 10),
+                observations = o.str("observations"),
+                advice = o.str("advice"),
+            )
+        } catch (e: Exception) {
+            // Модель ответила текстом — показываем как есть
+            FaceAiResult(null, null, null, "", raw)
+        }
+    }
+
     private fun JsonObject.str(k: String) = (this[k] as? JsonPrimitive)?.content ?: ""
     private fun JsonObject.num(k: String) = (this[k] as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 0
+}
+
+data class FaceAiResult(
+    val skin: Int?, val acne: Int?, val puffiness: Int?,
+    val observations: String, val advice: String,
+) {
+    fun asText() = listOf(
+        observations.takeIf { it.isNotBlank() }?.let { "👀 Что видно:\n$it" },
+        advice.takeIf { it.isNotBlank() }?.let { "📋 План:\n$it" },
+    ).filterNotNull().joinToString("\n\n")
 }
 
 data class EstimatedFood(val name: String, val kcal: Int, val protein: Int, val carbs: Int, val fat: Int)

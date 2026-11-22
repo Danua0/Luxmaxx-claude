@@ -48,6 +48,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.luxmaxx.app.AppViewModel
+import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.data.FaceCheck
 import com.luxmaxx.app.data.FaceMetrics
 import com.luxmaxx.app.face.FaceResult
@@ -92,6 +93,7 @@ fun FaceScreen(vm: AppViewModel) {
     var water by remember { mutableFloatStateOf(2f) }
     var notes by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf<Long?>(null) }
+    var aiResult by remember { mutableStateOf<FaceAiResult?>(null) }
 
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         if (ok) photoPath = pendingPath else pendingPath?.let { File(it).delete() }
@@ -102,7 +104,7 @@ fun FaceScreen(vm: AppViewModel) {
 
     LaunchedEffect(photoPath) {
         val p = photoPath ?: return@LaunchedEffect
-        analyzing = true; metrics = null; warning = null
+        analyzing = true; metrics = null; warning = null; aiResult = null
         when (val r = vm.analyzeFace(File(p))) {
             is FaceResult.Ok -> { metrics = r.metrics; warning = r.warning }
             is FaceResult.Error -> warning = r.message
@@ -120,7 +122,7 @@ fun FaceScreen(vm: AppViewModel) {
         item {
             Text("Состояние лица", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 8.dp))
-            Text("Фото анализируется прямо на телефоне и никуда не отправляется.",
+            Text("Замеры симметрии делаются на телефоне. Фото уходит в DeepSeek только по кнопке «AI-анализ».",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -159,6 +161,30 @@ fun FaceScreen(vm: AppViewModel) {
                 }
                 warning?.let { Text("⚠️ $it", color = Amber, style = MaterialTheme.typography.bodySmall) }
 
+                photoPath?.let { p ->
+                    FilledTonalButton(
+                        enabled = !busy && !analyzing,
+                        onClick = {
+                            if (d.apiKey.isBlank()) vm.message.value = "Добавь ключ DeepSeek в Профиле"
+                            else vm.analyzeFacePhotoAi(File(p), notes) { r ->
+                                aiResult = r
+                                r.skin?.let { skin = it.toFloat() }
+                                r.acne?.let { acne = it.toFloat() }
+                                r.puffiness?.let { puff = it.toFloat() }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (busy) { CircularProgressIndicator(Modifier.size(18.dp)); Text("  DeepSeek смотрит фото…") }
+                        else Text("🤖 AI-анализ фото (DeepSeek)")
+                    }
+                }
+                aiResult?.let { r ->
+                    if (r.skin != null) Text("AI выставил оценки ниже — поправь, если не согласен.",
+                        style = MaterialTheme.typography.bodySmall, color = Amber)
+                    Text(r.asText(), style = MaterialTheme.typography.bodyMedium)
+                }
+
                 LabeledSlider("Кожа в целом", skin, 1f..10f, 8, { skin = it }, "/10")
                 LabeledSlider("Высыпания", acne, 0f..10f, 9, { acne = it }, "/10")
                 LabeledSlider("Отёчность", puff, 0f..10f, 9, { puff = it }, "/10")
@@ -175,9 +201,10 @@ fun FaceScreen(vm: AppViewModel) {
                                 skin = skin.roundToInt(), acne = acne.roundToInt(), puffiness = puff.roundToInt(),
                                 sleepHours = (sleep * 2).roundToInt() / 2.0, waterLiters = (water * 2).roundToInt() / 2.0,
                                 notes = notes.trim(), metrics = metrics,
+                                aiAdvice = aiResult?.asText()?.takeIf { it.isNotBlank() },
                             )
                         )
-                        photoPath = null; pendingPath = null; metrics = null; warning = null; notes = ""
+                        photoPath = null; pendingPath = null; metrics = null; warning = null; notes = ""; aiResult = null
                         vm.message.value = "Отметка сохранена"
                     },
                     modifier = Modifier.fillMaxWidth(),
