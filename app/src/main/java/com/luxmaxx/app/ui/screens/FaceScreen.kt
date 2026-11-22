@@ -3,6 +3,8 @@ package com.luxmaxx.app.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,17 +12,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -40,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -53,13 +65,24 @@ import com.luxmaxx.app.data.FaceCheck
 import com.luxmaxx.app.data.FaceMetrics
 import com.luxmaxx.app.face.FaceResult
 import com.luxmaxx.app.today
+import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.LabeledSlider
 import com.luxmaxx.app.ui.components.LineChart
+import com.luxmaxx.app.ui.components.Pill
+import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.StatTile
+import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Amber
 import com.luxmaxx.app.ui.theme.Blue
+import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.Red
+import com.luxmaxx.app.ui.theme.Stroke
+import com.luxmaxx.app.ui.theme.Surface1
+import com.luxmaxx.app.ui.theme.TextHi
+import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Violet
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -120,69 +143,74 @@ fun FaceScreen(vm: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("Состояние лица", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp))
-            Text("Замеры симметрии делаются на телефоне. Фото уходит в DeepSeek только по кнопке «AI-анализ».",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ScreenHeader("Состояние лица", overline = "Ежедневный чек-ин",
+                subtitle = "Замеры делаются на телефоне. Фото уходит в DeepSeek только по кнопке «AI-анализ».")
         }
 
         item {
-            SectionCard("Новая отметка") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {
+            SectionCard("Новая отметка", icon = Icons.Filled.CameraAlt, accent = Violet) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GradientButton("Камера", icon = Icons.Filled.CameraAlt, modifier = Modifier.weight(1f), onClick = {
                         val f = vm.newFacePhotoFile()
                         pendingPath = f.absolutePath
                         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", f)
                         takePicture.launch(uri)
-                    }) {
-                        Icon(Icons.Filled.CameraAlt, null, Modifier.size(18.dp)); Text("  Фото")
-                    }
-                    OutlinedButton(onClick = {
-                        pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }) {
-                        Icon(Icons.Filled.PhotoLibrary, null, Modifier.size(18.dp)); Text("  Галерея")
+                    })
+                    Row(
+                        Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(16.dp)).background(Surface1)
+                            .border(1.dp, Stroke, RoundedCornerShape(16.dp))
+                            .clickable { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.PhotoLibrary, null, tint = TextHi, modifier = Modifier.size(20.dp))
+                        Text("  Галерея", color = TextHi, style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 photoPath?.let { p ->
                     AsyncImage(
                         model = File(p), contentDescription = "Фото лица",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, BorderGradient, RoundedCornerShape(20.dp)),
                     )
                 }
                 if (analyzing) Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(20.dp)); Text("  Анализирую лицо…")
                 }
                 metrics?.let { m ->
-                    Text("Симметрия: ${m.symmetry}%", fontWeight = FontWeight.SemiBold)
-                    Text("Индекс ширины лица: ${m.widthIndex}", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StatTile("Симметрия", "${m.symmetry}", Modifier.weight(1f), "%", accent = Violet)
+                        StatTile("Индекс ширины", "${m.widthIndex}", Modifier.weight(1f), accent = Blue)
+                    }
                     Text("Индекс ширины снижается, когда уходят отёки и лишний жир. Сравнивай только фото в одинаковых условиях.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 warning?.let { Text("⚠️ $it", color = Amber, style = MaterialTheme.typography.bodySmall) }
 
                 photoPath?.let { p ->
-                    FilledTonalButton(
-                        enabled = !busy && !analyzing,
-                        onClick = {
-                            if (d.apiKey.isBlank()) vm.message.value = "Добавь ключ DeepSeek в Профиле"
-                            else vm.analyzeFacePhotoAi(File(p), notes) { r ->
-                                aiResult = r
-                                r.skin?.let { skin = it.toFloat() }
-                                r.acne?.let { acne = it.toFloat() }
-                                r.puffiness?.let { puff = it.toFloat() }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                    Row(
+                        Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Brush.linearGradient(listOf(Violet, Blue)))
+                            .clickable(enabled = !busy && !analyzing) {
+                                if (d.apiKey.isBlank()) vm.message.value = "Добавь ключ DeepSeek в Профиле"
+                                else vm.analyzeFacePhotoAi(File(p), notes) { r ->
+                                    aiResult = r
+                                    r.skin?.let { skin = it.toFloat() }
+                                    r.acne?.let { acne = it.toFloat() }
+                                    r.puffiness?.let { puff = it.toFloat() }
+                                }
+                            },
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (busy) { CircularProgressIndicator(Modifier.size(18.dp)); Text("  DeepSeek смотрит фото…") }
-                        else Text("🤖 AI-анализ фото (DeepSeek)")
+                        if (busy) { CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp); Text("  DeepSeek смотрит фото…", color = Color.White, fontWeight = FontWeight.Bold) }
+                        else { Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(20.dp)); Text("  AI-анализ фото", color = Color.White, fontWeight = FontWeight.Bold) }
                     }
                 }
                 aiResult?.let { r ->
                     if (r.skin != null) Text("AI выставил оценки ниже — поправь, если не согласен.",
                         style = MaterialTheme.typography.bodySmall, color = Amber)
-                    Text(r.asText(), style = MaterialTheme.typography.bodyMedium)
+                    Text(r.asText(), style = MaterialTheme.typography.bodyMedium, color = TextHi,
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Violet.copy(alpha = 0.10f)).padding(14.dp))
                 }
 
                 LabeledSlider("Кожа в целом", skin, 1f..10f, 8, { skin = it }, "/10")
@@ -191,8 +219,9 @@ fun FaceScreen(vm: AppViewModel) {
                 LabeledSlider("Сон прошлой ночью", sleep, 3f..12f, 17, { sleep = it }, " ч")
                 LabeledSlider("Вода вчера", water, 0f..5f, 9, { water = it }, " л")
                 OutlinedTextField(notes, { notes = it }, label = { Text("Заметки (новый крем, пицца вечером…)") },
-                    modifier = Modifier.fillMaxWidth())
-                Button(
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
+                GradientButton(
+                    "Сохранить отметку", icon = Icons.Filled.Check,
                     enabled = !analyzing,
                     onClick = {
                         vm.saveFaceCheck(
@@ -208,23 +237,24 @@ fun FaceScreen(vm: AppViewModel) {
                         vm.message.value = "Отметка сохранена"
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Сохранить отметку") }
+                )
             }
         }
 
         item {
-            SectionCard("Уход сегодня (${doneToday.size}/${routine.size})") {
+            SectionCard("Уход сегодня · ${doneToday.size}/${routine.size}", icon = Icons.Filled.Spa, accent = Green) {
                 routine.forEach { r ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { vm.toggleRoutine(r) }) {
-                        Checkbox(checked = r in doneToday, onCheckedChange = { vm.toggleRoutine(r) })
-                        Text(r, style = MaterialTheme.typography.bodyMedium)
+                        Checkbox(checked = r in doneToday, onCheckedChange = { vm.toggleRoutine(r) },
+                            colors = CheckboxDefaults.colors(checkedColor = Green, uncheckedColor = TextLo, checkmarkColor = Color(0xFF06140D)))
+                        Text(r, style = MaterialTheme.typography.bodyMedium, color = if (r in doneToday) TextLo else TextHi)
                     }
                 }
             }
         }
 
         if (checks.size >= 2) item {
-            SectionCard("Динамика") {
+            SectionCard("Динамика", icon = Icons.Filled.ShowChart, accent = Blue) {
                 Text("Кожа (выше = лучше)", style = MaterialTheme.typography.labelLarge)
                 LineChart(checks.takeLast(30).map { it.skin.toDouble() }, color = Green)
                 Text("Отёчность (ниже = лучше)", style = MaterialTheme.typography.labelLarge)
@@ -239,7 +269,7 @@ fun FaceScreen(vm: AppViewModel) {
 
         val withPhotos = checks.filter { it.photoPath != null && File(it.photoPath).exists() }
         if (withPhotos.size >= 2) item {
-            SectionCard("Было → Стало") {
+            SectionCard("Было → Стало", icon = Icons.Filled.CompareArrows, accent = Gold) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(withPhotos.first(), withPhotos.last()).forEach { c ->
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -256,17 +286,17 @@ fun FaceScreen(vm: AppViewModel) {
         }
 
         if (checks.isNotEmpty()) item {
-            Text("История", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("История", style = MaterialTheme.typography.titleLarge, color = TextHi, modifier = Modifier.padding(top = 6.dp))
         }
         items(checks.reversed(), key = { it.id }) { c ->
             SectionCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     c.photoPath?.takeIf { File(it).exists() }?.let {
                         AsyncImage(File(it), null, contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)))
+                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)))
                     }
                     Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                        Text(c.date, fontWeight = FontWeight.SemiBold)
+                        Text(c.date, style = MaterialTheme.typography.titleSmall, color = TextHi)
                         Text("Кожа ${c.skin} · Высыпания ${c.acne} · Отёки ${c.puffiness}", style = MaterialTheme.typography.bodySmall)
                         Text("Сон ${c.sleepHours} ч · Вода ${c.waterLiters} л" +
                             (c.metrics?.let { " · Сим. ${it.symmetry}%" } ?: ""), style = MaterialTheme.typography.bodySmall)
@@ -280,15 +310,14 @@ fun FaceScreen(vm: AppViewModel) {
                         modifier = Modifier.clickable { expanded = if (expanded == c.id) null else c.id })
                     if (expanded == c.id) Text(c.aiAdvice, style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    FilledTonalButton(enabled = !busy, onClick = { vm.faceAdvice(c); expanded = c.id }) {
-                        Text(if (busy) "AI думает…" else "🤖 Получить советы AI")
-                    }
+                    Pill(if (busy) "AI думает…" else "✨ Получить советы AI", Violet,
+                        Modifier.clickable(enabled = !busy) { vm.faceAdvice(c); expanded = c.id })
                 }
             }
         }
 
         item {
-            SectionCard("Что реально улучшает лицо") {
+            SectionCard("Что реально улучшает лицо", icon = Icons.Filled.Lightbulb, accent = Blue) {
                 Text("• Снижение % жира (до ~12–15% у парней) — скулы и челюсть видны лучше всего от этого.")
                 Text("• Сон и меньше соли/алкоголя — главные враги утренних отёков.")
                 Text("• SPF каждый день — защищает от пигментации и раннего старения.")

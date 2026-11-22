@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.luxmaxx.app.ai.DeepSeekClient
 import com.luxmaxx.app.ai.DeepSeekException
 import com.luxmaxx.app.ai.EstimatedFood
+import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.data.AppData
 import com.luxmaxx.app.data.ChatMessage
 import com.luxmaxx.app.data.FaceCheck
@@ -17,20 +18,19 @@ import com.luxmaxx.app.data.SetEntry
 import com.luxmaxx.app.data.WeightEntry
 import com.luxmaxx.app.data.WorkoutLog
 import com.luxmaxx.app.face.FaceAnalyzer
-import com.luxmaxx.app.face.ImageEncoder
-import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.face.FaceResult
+import com.luxmaxx.app.face.ImageEncoder
 import com.luxmaxx.app.logic.Calculator
 import com.luxmaxx.app.logic.Program
 import com.luxmaxx.app.logic.Programs
 import com.luxmaxx.app.logic.Targets
+import java.io.File
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
-import java.time.LocalDate
 
 fun today(): String = LocalDate.now().toString()
 

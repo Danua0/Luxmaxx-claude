@@ -1,24 +1,31 @@
 package com.luxmaxx.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -36,11 +43,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
+import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.luxFieldColors
+import com.luxmaxx.app.ui.theme.BorderGradient
+import com.luxmaxx.app.ui.theme.CardGradient
+import com.luxmaxx.app.ui.theme.Gold
+import com.luxmaxx.app.ui.theme.GoldDeep
+import com.luxmaxx.app.ui.theme.Stroke
+import com.luxmaxx.app.ui.theme.Surface2
+import com.luxmaxx.app.ui.theme.TextHi
+import com.luxmaxx.app.ui.theme.TextLo
 
 private val suggestions = listOf(
     "Разбери мои последние тренировки",
@@ -63,20 +84,18 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().imePadding()) {
-        Row(Modifier.padding(start = 16.dp, top = 8.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("AI-тренер", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("DeepSeek видит твой профиль, питание, тренировки и состояние лица",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.padding(horizontal = 16.dp)) {
+            ScreenHeader("AI-тренер", overline = "DeepSeek",
+                subtitle = "Видит твой профиль, питание, тренировки и состояние лица") {
+                if (d.chat.isNotEmpty()) IconButton(onClick = { vm.clearChat() }) { Icon(Icons.Filled.DeleteSweep, "Очистить чат", tint = TextLo) }
             }
-            if (d.chat.isNotEmpty()) IconButton(onClick = { vm.clearChat() }) { Icon(Icons.Filled.DeleteSweep, "Очистить чат") }
         }
 
         if (d.apiKey.isBlank()) {
             Box(Modifier.padding(16.dp)) {
                 SectionCard("Нужен API-ключ DeepSeek") {
                     Text("Зарегистрируйся на platform.deepseek.com, пополни баланс (запросы стоят копейки) и вставь ключ в профиле.")
-                    Button(onClick = onProfile) { Text("Открыть профиль") }
+                    GradientButton("Открыть профиль", onClick = onProfile)
                 }
             }
             return@Column
@@ -88,30 +107,39 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (d.chat.isEmpty()) item {
-                Text("Спроси что угодно про тренировки, питание или уход за лицом 👇",
-                    modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Gold, GoldDeep))),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.AutoAwesome, null, tint = Color(0xFF1C1200), modifier = Modifier.size(40.dp))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Чем помочь?", style = MaterialTheme.typography.titleLarge, color = TextHi)
+                    Text("Спроси про тренировки, питание или уход за лицом",
+                        style = MaterialTheme.typography.bodyMedium, color = TextLo)
+                }
             }
             items(d.chat) { m ->
                 val mine = m.role == "user"
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+                    val shape = if (mine) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
                     SelectionContainer {
                         Text(
                             m.content,
                             modifier = Modifier
-                                .widthIn(max = 320.dp)
-                                .background(
-                                    if (mine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    RoundedCornerShape(14.dp),
-                                )
-                                .padding(12.dp),
-                            color = if (mine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                .widthIn(max = 310.dp)
+                                .clip(shape)
+                                .background(if (mine) Brush.linearGradient(listOf(Gold, GoldDeep)) else CardGradient)
+                                .border(1.dp, if (mine) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else BorderGradient, shape)
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            color = if (mine) Color(0xFF1C1200) else TextHi,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
             }
             if (busy) item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(18.dp)); Text("  Думаю…")
+                    CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp); Text("  Думаю…", color = TextLo)
                 }
             }
         }
@@ -120,14 +148,23 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            items(suggestions) { s -> AssistChip(onClick = { vm.sendChat(s) }, label = { Text(s) }, enabled = !busy) }
+            items(suggestions) { s ->
+                Text(s, color = TextHi, style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.clip(CircleShape).background(Surface2).border(1.dp, Stroke, CircleShape)
+                        .clickable(enabled = !busy) { vm.sendChat(s) }.padding(horizontal = 14.dp, vertical = 9.dp))
+            }
         }
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(input, { input = it }, modifier = Modifier.weight(1f),
-                placeholder = { Text("Сообщение…") }, maxLines = 4)
-            IconButton(enabled = !busy && input.isNotBlank(), onClick = { vm.sendChat(input); input = "" }) {
-                Icon(Icons.AutoMirrored.Filled.Send, "Отправить")
-            }
+                placeholder = { Text("Сообщение…") }, maxLines = 4, shape = RoundedCornerShape(22.dp), colors = luxFieldColors())
+            Spacer(Modifier.width(8.dp))
+            val canSend = !busy && input.isNotBlank()
+            Box(
+                Modifier.size(52.dp).clip(CircleShape)
+                    .background(if (canSend) Brush.linearGradient(listOf(Gold, GoldDeep)) else Brush.linearGradient(listOf(Surface2, Surface2)))
+                    .clickable(enabled = canSend) { vm.sendChat(input); input = "" },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.AutoMirrored.Filled.Send, "Отправить", tint = if (canSend) Color(0xFF1C1200) else TextLo) }
         }
     }
 }

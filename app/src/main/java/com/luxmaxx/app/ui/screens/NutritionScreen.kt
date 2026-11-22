@@ -1,17 +1,29 @@
 package com.luxmaxx.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,18 +40,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
 import com.luxmaxx.app.ai.EstimatedFood
 import com.luxmaxx.app.today
+import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.MacroBar
 import com.luxmaxx.app.ui.components.NumberField
+import com.luxmaxx.app.ui.components.Pill
+import com.luxmaxx.app.ui.components.ProgressRing
+import com.luxmaxx.app.ui.components.RingLabel
+import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Blue
+import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.Red
+import com.luxmaxx.app.ui.theme.Stroke
+import com.luxmaxx.app.ui.theme.Surface1
+import com.luxmaxx.app.ui.theme.TextHi
+import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Violet
 
 private data class Preset(val name: String, val kcal: Int, val p: Int, val c: Int, val f: Int)
 
@@ -78,16 +103,20 @@ fun NutritionScreen(vm: AppViewModel) {
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { ScreenHeader("Питание", overline = "Профицит для роста", subtitle = "Цель: ${t.kcal} ккал · ${t.protein} г белка") }
         item {
-            Text("Питание", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp))
-        }
-        item {
-            SectionCard("Сегодня") {
-                MacroBar("Калории", kcal, t.kcal, "ккал")
-                MacroBar("Белок", prot, t.protein, "г", Green)
-                MacroBar("Углеводы", foods.sumOf { it.carbs }, t.carbs, "г", Blue)
-                MacroBar("Жиры", foods.sumOf { it.fat }, t.fat, "г", Red)
+            SectionCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProgressRing(kcal.toFloat() / t.kcal, size = 128.dp, thickness = 13.dp) {
+                        RingLabel("$kcal", "из ${t.kcal} ккал", color = Gold)
+                    }
+                    Spacer(Modifier.width(18.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MacroBar("Белок", prot, t.protein, "г", Green)
+                        MacroBar("Углеводы", foods.sumOf { it.carbs }, t.carbs, "г", Blue)
+                        MacroBar("Жиры", foods.sumOf { it.fat }, t.fat, "г", Violet)
+                    }
+                }
                 val left = t.kcal - kcal
                 Text(
                     when {
@@ -95,18 +124,19 @@ fun NutritionScreen(vm: AppViewModel) {
                         left > -200 -> "Норма выполнена 👌"
                         else -> "Перебор на ${-left} ккал — не страшно разово, но следи за темпом набора."
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall, color = TextLo,
                 )
             }
         }
         item {
-            SectionCard("🤖 Опиши, что съел — AI посчитает") {
+            SectionCard("Опиши, что съел — AI посчитает", icon = Icons.Filled.AutoAwesome, accent = Violet) {
                 OutlinedTextField(aiText, { aiText = it }, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp), colors = luxFieldColors(),
                     label = { Text("Напр.: тарелка борща, 2 куска хлеба и чай с сахаром") })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = !busy && aiText.isNotBlank(), onClick = {
+                    GradientButton(if (busy) "Считаю…" else "Посчитать", enabled = !busy && aiText.isNotBlank(), onClick = {
                         vm.estimateFood(aiText) { estimated = it }
-                    }) { Text("Посчитать") }
+                    }, icon = Icons.Filled.AutoAwesome)
                     if (busy) CircularProgressIndicator(Modifier.size(24.dp))
                 }
                 estimated.forEach { e ->
@@ -124,42 +154,54 @@ fun NutritionScreen(vm: AppViewModel) {
             }
         }
         item {
-            SectionCard("Быстро добавить") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SectionCard("Быстро добавить", icon = Icons.Filled.Bolt) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     presets.forEach { pr ->
-                        AssistChip(onClick = { vm.addFood(pr.name, pr.kcal, pr.p, pr.c, pr.f) }, label = { Text(pr.name) })
+                        Column(
+                            Modifier.clip(RoundedCornerShape(14.dp)).background(Surface1)
+                                .border(1.dp, Stroke, RoundedCornerShape(14.dp))
+                                .clickable { vm.addFood(pr.name, pr.kcal, pr.p, pr.c, pr.f); vm.message.value = "+ ${pr.name}" }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Text(pr.name, style = MaterialTheme.typography.labelLarge, color = TextHi)
+                            Text("${pr.kcal} ккал · Б${pr.p}", style = MaterialTheme.typography.labelMedium, color = TextLo)
+                        }
                     }
                 }
             }
         }
         item {
-            SectionCard("Своё блюдо") {
-                OutlinedTextField(name, { name = it }, label = { Text("Название") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            SectionCard("Своё блюдо", icon = Icons.Filled.Edit, accent = Blue) {
+                OutlinedTextField(name, { name = it }, label = { Text("Название") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     NumberField(k, { k = it }, "Ккал", Modifier.weight(1f), decimal = false)
                     NumberField(p, { p = it }, "Б", Modifier.weight(1f), decimal = false)
                     NumberField(f, { f = it }, "Ж", Modifier.weight(1f), decimal = false)
                     NumberField(c, { c = it }, "У", Modifier.weight(1f), decimal = false)
                 }
-                Button(enabled = k.toIntOrNull() != null, onClick = {
+                GradientButton("Добавить", enabled = k.toIntOrNull() != null, onClick = {
                     vm.addFood(name.ifBlank { "Еда" }, k.toInt(), p.toIntOrNull() ?: 0, c.toIntOrNull() ?: 0, f.toIntOrNull() ?: 0)
                     name = ""; k = ""; p = ""; c = ""; f = ""
-                }) { Text("Добавить") }
+                }, modifier = Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
             }
         }
-        if (foods.isNotEmpty()) item { Text("Съедено сегодня", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-        items(foods.reversed(), key = { it.id }) { fe ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(fe.name)
-                    Text("${fe.kcal} ккал · Б${fe.protein} Ж${fe.fat} У${fe.carbs}", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (foods.isNotEmpty()) item {
+            SectionCard("Съедено сегодня", icon = Icons.Filled.Restaurant, accent = Green) {
+                foods.reversed().forEach { fe ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(fe.name, style = MaterialTheme.typography.bodyMedium, color = TextHi)
+                            Text("Б${fe.protein} · Ж${fe.fat} · У${fe.carbs}", style = MaterialTheme.typography.bodySmall, color = TextLo)
+                        }
+                        Pill("${fe.kcal} ккал")
+                        IconButton(onClick = { vm.deleteFood(fe.id) }) { Icon(Icons.Filled.Delete, "Удалить", tint = TextLo) }
+                    }
                 }
-                IconButton(onClick = { vm.deleteFood(fe.id) }) { Icon(Icons.Filled.Delete, "Удалить") }
             }
         }
         item {
-            SectionCard("Советы для набора") {
+            SectionCard("Советы для набора", icon = Icons.Filled.Lightbulb, accent = Blue) {
                 Text("• Белок на каждый приём пищи: 30–40 г, 4–5 раз в день.")
                 Text("• Не лезет еда? Пей калории: молоко, банан, овсянка, арахисовая паста в блендере = 800+ ккал.")
                 Text("• Креатин моногидрат 3–5 г в день — самая изученная и безопасная добавка для силы и массы.")

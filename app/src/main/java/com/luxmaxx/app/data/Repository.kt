@@ -1,10 +1,10 @@
 package com.luxmaxx.app.data
 
 import android.content.Context
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.File
 
 /** Хранит все данные локально в одном JSON-файле. Ничего не уходит в сеть, кроме запросов к DeepSeek. */
 class Repository(context: Context) {

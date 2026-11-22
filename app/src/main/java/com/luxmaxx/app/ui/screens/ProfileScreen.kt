@@ -9,8 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,9 +43,17 @@ import com.luxmaxx.app.data.Experience
 import com.luxmaxx.app.data.Profile
 import com.luxmaxx.app.data.Sex
 import com.luxmaxx.app.logic.Calculator
+import com.luxmaxx.app.ui.components.GradientButton
 import com.luxmaxx.app.ui.components.NumberField
+import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.StatTile
 import com.luxmaxx.app.ui.components.fmt
+import com.luxmaxx.app.ui.components.luxFieldColors
+import com.luxmaxx.app.ui.theme.Blue
+import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Violet
 
 @Composable
 fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boolean, onDone: () -> Unit) {
@@ -70,15 +84,14 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 if (!firstRun) IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
-                Text(if (firstRun) "Добро пожаловать в LuxMaxx 👋" else "Профиль",
-                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                ScreenHeader(if (firstRun) "Добро пожаловать" else "Профиль", overline = "LuxMaxx",
+                    subtitle = if (firstRun) "Заполни анкету — рассчитаю калории, белок и подберу программу." else null)
             }
-            if (firstRun) Text("Заполни анкету — я рассчитаю калории, белок и подберу программу тренировок.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            SectionCard("О тебе") {
-                OutlinedTextField(name, { name = it }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            SectionCard("О тебе", icon = Icons.Filled.Person) {
+                OutlinedTextField(name, { name = it }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(sex == Sex.MALE, { sex = Sex.MALE }, { Text("Мужчина") })
                     FilterChip(sex == Sex.FEMALE, { sex = Sex.FEMALE }, { Text("Женщина") })
@@ -91,14 +104,14 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
             }
         }
         item {
-            SectionCard("Активность вне зала") {
+            SectionCard("Активность вне зала", icon = Icons.AutoMirrored.Filled.DirectionsWalk, accent = Blue) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Activity.entries.forEach { a -> FilterChip(activity == a, { activity = a }, { Text(a.title) }) }
                 }
             }
         }
         item {
-            SectionCard("Тренировки") {
+            SectionCard("Тренировки", icon = Icons.Filled.FitnessCenter, accent = Green) {
                 Text("Сколько дней в неделю готов ходить в зал?")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     (2..6).forEach { d -> FilterChip(days == d, { days = d }, { Text("$d") }) }
@@ -110,17 +123,18 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
             }
         }
         item {
-            SectionCard("DeepSeek AI (необязательно)") {
+            SectionCard("DeepSeek AI (необязательно)", icon = Icons.Filled.AutoAwesome, accent = Violet) {
                 Text("Ключ нужен для AI-тренера, анализа динамики лица и подсчёта калорий по описанию. " +
                     "Получить: platform.deepseek.com → API keys. Ключ хранится только на телефоне.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(key, { key = it }, label = { Text("sk-...") }, singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(key, { key = it }, label = { Text("API-ключ sk-...") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(textModel, { textModel = it }, label = { Text("Модель для чата") },
-                        singleLine = true, modifier = Modifier.weight(1f))
+                        singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                     OutlinedTextField(visionModel, { visionModel = it }, label = { Text("Модель для фото") },
-                        singleLine = true, modifier = Modifier.weight(1f))
+                        singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                 }
                 Text("Если DeepSeek переименует модели — просто впиши новое название из их документации.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -131,14 +145,22 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
         }
         if (parsed != null) item {
             val t = Calculator.targets(parsed)
-            SectionCard("Твои цели для набора массы") {
-                Text("Калории: ${t.kcal} ккал (поддержка ≈ ${t.tdee})")
-                Text("Белок: ${t.protein} г · Жиры: ${t.fat} г · Углеводы: ${t.carbs} г")
-                Text("Вода: ≈ ${t.waterL} л · ИМТ: ${"%.1f".format(Calculator.bmi(parsed, parsed.weightKg))}")
+            SectionCard("Твои цели для набора", icon = Icons.Filled.TrackChanges) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatTile("Калории", "${t.kcal}", Modifier.weight(1f), "ккал", hint = "поддержка ${t.tdee}")
+                    StatTile("Белок", "${t.protein}", Modifier.weight(1f), "г", accent = Green)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatTile("Углеводы", "${t.carbs}", Modifier.weight(1f), "г", accent = Blue)
+                    StatTile("Жиры", "${t.fat}", Modifier.weight(1f), "г", accent = Violet)
+                }
+                Text("Вода ≈ ${t.waterL} л · ИМТ ${"%.1f".format(Calculator.bmi(parsed, parsed.weightKg))}",
+                    style = MaterialTheme.typography.bodySmall, color = TextLo)
             }
         }
         item {
-            Button(
+            GradientButton(
+                if (firstRun) "Начать" else "Сохранить",
                 onClick = {
                     parsed?.let { vm.saveProfile(it) }
                     vm.setApiKey(key)
@@ -147,7 +169,7 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
                 },
                 enabled = parsed != null,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            ) { Text(if (firstRun) "Начать" else "Сохранить") }
+            )
         }
     }
 }

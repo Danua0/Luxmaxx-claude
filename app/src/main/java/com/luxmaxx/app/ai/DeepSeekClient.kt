@@ -1,6 +1,8 @@
 package com.luxmaxx.app.ai
 
 import com.luxmaxx.app.data.ChatMessage
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -13,8 +15,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import java.net.HttpURLConnection
-import java.net.URL
 
 class DeepSeekException(msg: String) : Exception(msg)
 

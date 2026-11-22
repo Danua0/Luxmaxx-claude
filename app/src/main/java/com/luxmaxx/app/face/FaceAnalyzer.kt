@@ -9,9 +9,9 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
 import com.luxmaxx.app.data.FaceMetrics
-import kotlinx.coroutines.tasks.await
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlinx.coroutines.tasks.await
 
 sealed class FaceResult {
     data class Ok(val metrics: FaceMetrics, val warning: String?) : FaceResult()
