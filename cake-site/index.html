@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Сахарное Облако — торты ручной работы</title>
+  <meta name="description" content="Авторские торты на заказ: соберите свой торт в 3D-конструкторе, покрутите, задуйте свечи и отрежьте кусочек ещё до заказа." />
+  <meta name="theme-color" content="#fff6ef" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <header class="header" id="top">
+    <a class="logo" href="#top" aria-label="Сахарное Облако — на главную">
+      <span class="logo-mark">☁︎</span>
+      <span>Сахарное <em>Облако</em></span>
+    </a>
+    <nav class="nav" aria-label="Основное меню">
+      <a href="#catalog">Каталог</a>
+      <a href="#builder">Конструктор</a>
+      <a href="#process">Как мы работаем</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="#contacts">Контакты</a>
+    </nav>
+    <button class="cart-btn" id="cartOpen" aria-label="Открыть корзину">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM5.2 4l.6 3H21l-2 8H7.4L4.6 2H1v2h3.6Z"/></svg>
+      <span>Корзина</span>
+      <b class="cart-count" id="cartCount">0</b>
+    </button>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-text reveal">
+        <span class="kicker">Кондитерская ручной работы · с 2016 года</span>
+        <h1>Торты, которые хочется <em>потрогать</em></h1>
+        <p class="lead">Соберите торт в 3D: покрутите его, задуйте свечи и отрежьте кусочек, чтобы увидеть начинку, — а мы испечём точно такой же к вашему празднику.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary magnetic" href="#builder">Собрать свой торт</a>
+          <a class="btn btn-ghost" href="#catalog">Смотреть каталог</a>
+        </div>
+        <ul class="stats">
+          <li><b data-count="12400">0</b><span>тортов испекли</span></li>
+          <li><b>4,9★</b><span>средняя оценка</span></li>
+          <li><b>24 ч</b><span>доставка по городу</span></li>
+        </ul>
+      </div>
+      <div class="hero-stage reveal">
+        <div class="stage-ring" aria-hidden="true"></div>
+        <canvas id="heroCanvas" aria-label="Вращающийся 3D-торт"></canvas>
+        <div class="float-chip chip-a">🥛 Сливки 33%</div>
+        <div class="float-chip chip-b">🌿 Без маргарина</div>
+        <div class="float-chip chip-c">🍓 Свежие ягоды</div>
+        <div class="hero-caption">
+          <span id="heroName">Клубничное облако</span>
+          <div class="hero-dots" id="heroDots" role="tablist" aria-label="Торты на витрине"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>Натуральные сливки</span><span>✦</span><span>Бельгийский шоколад</span><span>✦</span><span>Свежие ягоды</span><span>✦</span><span>Доставка за 24 часа</span><span>✦</span><span>Ручная работа</span><span>✦</span><span>Дегустация начинок</span><span>✦</span>
+        <span>Натуральные сливки</span><span>✦</span><span>Бельгийский шоколад</span><span>✦</span><span>Свежие ягоды</span><span>✦</span><span>Доставка за 24 часа</span><span>✦</span><span>Ручная работа</span><span>✦</span><span>Дегустация начинок</span><span>✦</span>
+      </div>
+    </div>
+
+    <!-- CATALOG -->
+    <section class="section" id="catalog">
+      <div class="section-head reveal">
+        <span class="kicker">Витрина</span>
+        <h2>Любимые торты наших гостей</h2>
+        <p>Каждый можно взять как есть или открыть в конструкторе и поменять под себя.</p>
+      </div>
+      <div class="catalog" id="catalogGrid"></div>
+    </section>
+
+    <!-- BUILDER -->
+    <section class="section builder-section" id="builder">
+      <div class="section-head reveal">
+        <span class="kicker">3D-конструктор</span>
+        <h2>Соберите торт мечты</h2>
+        <p>Вращайте торт мышкой или пальцем. Нажмите на свечу — она погаснет, на торт — отрежется кусочек, на ягоду — она подпрыгнет.</p>
+      </div>
+
+      <div class="builder">
+        <div class="builder-stage">
+          <div class="stage-box">
+            <canvas id="builderCanvas" aria-label="Интерактивный 3D-торт"></canvas>
+            <div class="stage-tip" id="stageTip"></div>
+            <div class="stage-hint" id="stageHint">
+              <span class="hint-hand">👆</span> Потяните, чтобы покрутить
+            </div>
+            <div class="candle-status" id="candleStatus"></div>
+          </div>
+          <div class="stage-actions">
+            <button class="chip-btn" id="actBlow">🕯 <span>Задуть свечи</span></button>
+            <button class="chip-btn" id="actMic" title="Подуйте в микрофон">🎤 <span>Задуть по-настоящему</span></button>
+            <button class="chip-btn" id="actSlice">🔪 <span>Отрезать кусочек</span></button>
+            <button class="chip-btn" id="actSpin">🌀 <span>Покрутить</span></button>
+            <button class="chip-btn" id="actShot">📷 <span>Снимок</span></button>
+          </div>
+        </div>
+
+        <form class="builder-panel" id="builderForm" onsubmit="return false">
+          <fieldset class="step">
+            <legend><i>1</i> Размер</legend>
+            <div class="seg" id="optTiers"></div>
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>2</i> Бисквит</legend>
+            <div class="chips" id="optSponge"></div>
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>3</i> Начинка</legend>
+            <div class="chips" id="optFilling"></div>
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>4</i> Покрытие</legend>
+            <div class="swatches" id="optFrosting"></div>
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>5</i> Подтёки</legend>
+            <div class="chips" id="optDrip"></div>
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>6</i> Декор</legend>
+            <div class="chips" id="optToppings"></div>
+          </fieldset>
+          <fieldset class="step step-row">
+            <legend><i>7</i> Свечи <output id="candleOut">3</output></legend>
+            <input type="range" id="optCandles" min="0" max="10" step="1" value="3" aria-label="Количество свечей" />
+          </fieldset>
+          <fieldset class="step">
+            <legend><i>8</i> Надпись на топпере</legend>
+            <input type="text" id="optText" maxlength="26" placeholder="Например: С днём рождения!" autocomplete="off" />
+          </fieldset>
+
+          <div class="summary">
+            <div class="summary-meta">
+              <span id="sumWeight">3,2 кг</span>
+              <span id="sumGuests">16–20 гостей</span>
+            </div>
+            <div class="summary-price"><b id="sumPrice">0</b> ₽</div>
+            <button class="btn btn-primary btn-block" id="addCustom" type="button">Добавить в корзину</button>
+            <button class="btn-link" id="resetBuilder" type="button">Сбросить к классике</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="section" id="process">
+      <div class="section-head reveal">
+        <span class="kicker">Без сюрпризов</span>
+        <h2>Как мы работаем</h2>
+      </div>
+      <div class="process">
+        <article class="tilt reveal"><span class="p-icon">🎨</span><b>01</b><h3>Собираете торт</h3><p>В конструкторе или вместе с нашим кондитером в чате — бесплатно.</p></article>
+        <article class="tilt reveal"><span class="p-icon">🧁</span><b>02</b><h3>Пробуете начинки</h3><p>Для тортов от 3 кг — дегустационный сет из 4 начинок в подарок.</p></article>
+        <article class="tilt reveal"><span class="p-icon">👩‍🍳</span><b>03</b><h3>Мы печём</h3><p>Только сливки, масло 82,5% и бельгийский шоколад. Присылаем фото перед отправкой.</p></article>
+        <article class="tilt reveal"><span class="p-icon">🚚</span><b>04</b><h3>Привозим</h3><p>В термобоксе, точно ко времени. Или заберите сами со скидкой 5%.</p></article>
+      </div>
+    </section>
+
+    <!-- REVIEWS -->
+    <section class="section" id="reviews">
+      <div class="section-head reveal">
+        <span class="kicker">Отзывы</span>
+        <h2>Говорят гости</h2>
+      </div>
+      <div class="reviews">
+        <figure class="review reveal"><div class="stars">★★★★★</div><blockquote>Собрала торт в конструкторе на телефоне, привезли ровно такой же. Сын полвечера задувал свечи на сайте, а потом по-настоящему.</blockquote><figcaption><span class="ava">А</span>Анна, день рождения сына</figcaption></figure>
+        <figure class="review reveal"><div class="stars">★★★★★</div><blockquote>«Карамельный каскад» на свадьбу — гости спрашивали контакты кондитерской. Не приторный, крем лёгкий.</blockquote><figcaption><span class="ava">Д</span>Дмитрий и Ольга, свадьба</figcaption></figure>
+        <figure class="review reveal"><div class="stars">★★★★★</div><blockquote>Заказываем корпоративные торты третий год. Удобно, что видно разрез и сразу понятно, что внутри.</blockquote><figcaption><span class="ava">М</span>Мария, офис-менеджер</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- CTA / CONTACTS -->
+    <section class="section contacts" id="contacts">
+      <div class="contact-card reveal">
+        <div>
+          <span class="kicker">Остались вопросы?</span>
+          <h2>Поможем выбрать торт</h2>
+          <p>Пишите или звоните каждый день с 9:00 до 21:00. Заказы принимаем минимум за 2 дня до праздника.</p>
+          <ul class="contact-list">
+            <li>📍 Москва, ул. Кондитерская, 7</li>
+            <li>📞 +7 (900) 000-00-00</li>
+            <li>✉️ hello@sugar-cloud.example</li>
+          </ul>
+        </div>
+        <a class="btn btn-primary magnetic" href="#builder">Собрать торт</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> Сахарное Облако</span>
+    <span>Сделано с любовью и сливочным маслом</span>
+  </footer>
+
+  <!-- CART -->
+  <div class="overlay" id="overlay" hidden></div>
+  <aside class="drawer" id="cart" aria-label="Корзина" aria-hidden="true">
+    <div class="drawer-head">
+      <h3>Корзина</h3>
+      <button class="icon-btn" id="cartClose" aria-label="Закрыть корзину">✕</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="drawer-foot">
+      <div class="cart-total"><span>Итого</span><b id="cartTotal">0 ₽</b></div>
+      <button class="btn btn-primary btn-block" id="checkout">Оформить заказ</button>
+    </div>
+  </aside>
+
+  <!-- CHECKOUT -->
+  <dialog class="modal" id="orderModal">
+    <form method="dialog" class="order-form" id="orderForm">
+      <button class="icon-btn modal-close" value="cancel" formnovalidate aria-label="Закрыть">✕</button>
+      <div class="order-body">
+        <h3>Оформление заказа</h3>
+        <label>Имя<input name="name" required autocomplete="name" placeholder="Как к вам обращаться" /></label>
+        <label>Телефон<input name="phone" type="tel" required autocomplete="tel" placeholder="+7 (___) ___-__-__" /></label>
+        <div class="row">
+          <label>Дата<input name="date" type="date" required id="orderDate" /></label>
+          <label>Время<select name="time"><option>10:00–13:00</option><option>13:00–16:00</option><option>16:00–19:00</option><option>19:00–21:00</option></select></label>
+        </div>
+        <div class="seg seg-small">
+          <label><input type="radio" name="delivery" value="courier" checked /> <span>Доставка</span></label>
+          <label><input type="radio" name="delivery" value="pickup" /> <span>Самовывоз −5%</span></label>
+        </div>
+        <label class="addr">Адрес<input name="address" placeholder="Улица, дом, квартира" /></label>
+        <label>Комментарий<textarea name="comment" rows="2" placeholder="Аллергии, пожелания к упаковке…"></textarea></label>
+        <div class="order-total"><span>К оплате</span><b id="orderTotal">0 ₽</b></div>
+        <button class="btn btn-primary btn-block" id="orderSubmit" value="default">Подтвердить заказ</button>
+        <p class="fine">Нажимая кнопку, вы соглашаетесь на обработку персональных данных. Оплата — после звонка кондитера.</p>
+      </div>
+      <div class="order-done" hidden>
+        <div class="done-icon">🎉</div>
+        <h3>Заказ принят!</h3>
+        <p>Кондитер позвонит в течение 15 минут, чтобы уточнить детали. Номер заказа: <b id="orderNum"></b></p>
+        <button class="btn btn-primary" value="cancel" formnovalidate>Отлично</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+  <noscript><p class="noscript">Для 3D-конструктора включите JavaScript.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
