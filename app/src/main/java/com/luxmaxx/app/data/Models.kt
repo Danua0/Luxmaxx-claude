@@ -115,4 +115,7 @@ data class AppData(
     val visionModel: String = "deepseek-flash",
     val faceRoutineDone: Map<String, List<String>> = emptyMap(), // дата -> выполненные пункты ухода
     val looks: Looks = Looks(),
+    val seenAchievements: Set<String> = emptySet(),
+    val seenLevel: Int = 1,
+    val achievementsInit: Boolean = false,
 )

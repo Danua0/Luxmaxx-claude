@@ -51,15 +51,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
 import com.luxmaxx.app.data.SetEntry
+import com.luxmaxx.app.logic.Muscles
 import com.luxmaxx.app.logic.PlannedExercise
 import com.luxmaxx.app.logic.Programs
 import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.HeroBanner
 import com.luxmaxx.app.ui.components.IconBadge
+import com.luxmaxx.app.ui.components.MiniMuscleMap
 import com.luxmaxx.app.ui.components.NumberField
 import com.luxmaxx.app.ui.components.Pill
 import com.luxmaxx.app.ui.components.ProgressRing
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.fmt
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.Gold
@@ -69,6 +73,7 @@ import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Surface1
 import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
+import com.luxmaxx.app.ui.theme.Violet
 import kotlinx.coroutines.delay
 
 @Composable
@@ -90,11 +95,18 @@ fun WorkoutScreen(vm: AppViewModel) {
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { ScreenHeader(program.title, overline = "Твоя программа", subtitle = program.description) }
+        item {
+            HeroBanner(program.title, program.description, "🏋️", modifier = Modifier.padding(top = 10.dp).enter(0)) {
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Pill("${d.workouts.size} трен.", Gold)
+                    Pill("PR: ${com.luxmaxx.app.logic.Progress.personalRecords(d)}", Green)
+                }
+            }
+        }
 
         itemsIndexed(program.days) { i, wd ->
             val isNext = wd == next
-            SectionCard {
+            SectionCard(modifier = Modifier.enter(i + 1)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))
@@ -111,6 +123,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                             style = MaterialTheme.typography.bodySmall, color = TextLo)
                     }
                     if (isNext) Pill("СЛЕДУЮЩАЯ")
+                    MiniMuscleMap(Muscles.planHeat(wd.exercises), 64.dp)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     wd.exercises.forEach { ex ->
@@ -118,6 +131,10 @@ fun WorkoutScreen(vm: AppViewModel) {
                             Box(Modifier.size(6.dp).clip(CircleShape).background(if (isNext) Gold else TextLo))
                             Spacer(Modifier.width(10.dp))
                             Text(ex.name, style = MaterialTheme.typography.bodyMedium, color = TextHi, modifier = Modifier.weight(1f))
+                            Muscles.primary(ex.name)?.let { m ->
+                                Text(m.title, style = MaterialTheme.typography.labelSmall, color = TextLo.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(end = 8.dp))
+                            }
                             Text("${ex.sets}×${ex.repMin}–${ex.repMax}", style = MaterialTheme.typography.labelLarge, color = TextLo)
                         }
                     }
@@ -195,7 +212,7 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            ScreenHeader(dayName, overline = "Идёт тренировка") {
+            ScreenHeader(dayName, overline = "🔴 Идёт тренировка") {
                 IconButton(onClick = { vm.cancelWorkout() }) { Icon(Icons.Filled.Close, "Отменить", tint = TextLo) }
             }
         }
@@ -238,6 +255,7 @@ private fun ActiveWorkout(vm: AppViewModel, dayName: String, exercises: List<Pla
             SectionCard(ex.name, icon = if (complete) Icons.Filled.Check else Icons.Filled.FitnessCenter,
                 accent = if (complete) Green else Gold) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Muscles.primary(ex.name)?.let { Pill("🎯 ${it.title}", Violet) }
                     Pill("${ex.sets} × ${ex.repMin}–${ex.repMax}", Blue)
                     Pill("${done.size}/${ex.sets} готово", if (complete) Green else TextLo)
                 }

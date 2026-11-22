@@ -14,7 +14,8 @@ import kotlin.math.hypot
 import kotlinx.coroutines.tasks.await
 
 sealed class FaceResult {
-    data class Ok(val metrics: FaceMetrics, val warning: String?) : FaceResult()
+    /** contours — линии лица в долях от размера фото (0..1), для отрисовки «сетки» поверх фото. */
+    data class Ok(val metrics: FaceMetrics, val warning: String?, val contours: List<List<Pair<Float, Float>>> = emptyList(), val aspect: Float = 1f) : FaceResult()
     data class Error(val message: String) : FaceResult()
 }
 
@@ -91,6 +92,10 @@ object FaceAnalyzer {
             abs(face.headEulerAngleX) > 12 -> "Голова наклонена — держи камеру на уровне глаз."
             else -> null
         }
+        val rotated = image.rotationDegrees == 90 || image.rotationDegrees == 270
+        val iw = (if (rotated) image.height else image.width).toFloat().coerceAtLeast(1f)
+        val ih = (if (rotated) image.width else image.height).toFloat().coerceAtLeast(1f)
+        val contours = face.allContours.map { c -> c.points.map { pt -> (pt.x / iw) to (pt.y / ih) } }.filter { it.size >= 2 }
         return FaceResult.Ok(
             FaceMetrics(
                 symmetry = Math.round(symmetry * 10) / 10.0,
@@ -99,6 +104,8 @@ object FaceAnalyzer {
                 smileProb = face.smilingProbability?.toDouble(),
             ),
             warning,
+            contours,
+            iw / ih,
         )
     }
 }

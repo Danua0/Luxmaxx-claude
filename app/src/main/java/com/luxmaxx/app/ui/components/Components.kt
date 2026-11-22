@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -33,9 +34,11 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -67,18 +70,10 @@ private val CardShape = RoundedCornerShape(24.dp)
 /** Фон всего приложения: тёмный с тёплым свечением сверху. */
 @Composable
 fun ScreenBackground(content: @Composable BoxScope.() -> Unit) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Bg)
-            .background(
-                Brush.radialGradient(
-                    listOf(Color(0x33FF9F3D), Color(0x0FFFC14D), Color.Transparent),
-                    center = Offset(900f, -150f), radius = 1300f,
-                )
-            ),
-        content = content,
-    )
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        AnimatedBackdrop()
+        content()
+    }
 }
 
 /** Заголовок экрана: маленький надзаголовок + крупный жирный заголовок. */
@@ -114,6 +109,14 @@ fun SectionCard(
             .fillMaxWidth()
             .clip(CardShape)
             .background(CardGradient)
+            .drawWithContent {
+                drawContent()
+                // блик по верхней кромке — эффект стекла
+                drawRect(
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.06f), Color.Transparent), endY = 60f),
+                    size = androidx.compose.ui.geometry.Size(size.width, 60f),
+                )
+            }
             .border(1.dp, BorderGradient, CardShape)
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -132,12 +135,15 @@ fun SectionCard(
 /** Акцентная карточка с золотым градиентом (для главного действия). */
 @Composable
 fun HeroCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    val src = remember { MutableInteractionSource() }
     Column(
         modifier
+            .pressScale(src)
             .fillMaxWidth()
             .clip(CardShape)
             .background(Brush.linearGradient(listOf(Color(0xFFFFC14D), Color(0xFFFF8A3D), Color(0xFFE0553A))))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .shimmer(0.28f)
+            .then(if (onClick != null) Modifier.clickable(interactionSource = src, indication = null, onClick = onClick) else Modifier)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
@@ -162,12 +168,15 @@ fun GradientButton(
     icon: ImageVector? = null,
 ) {
     val shape = RoundedCornerShape(16.dp)
+    val src = remember { MutableInteractionSource() }
     Row(
         modifier
+            .pressScale(src)
             .heightIn(min = 52.dp)
             .clip(shape)
             .background(if (enabled) GoldGradient else Brush.linearGradient(listOf(StrokeColor, StrokeColor)))
-            .clickable(enabled = enabled, onClick = onClick)
+            .then(if (enabled) Modifier.shimmer(0.22f, 3200) else Modifier)
+            .clickable(interactionSource = src, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -191,7 +200,7 @@ fun StatTile(label: String, value: String, modifier: Modifier = Modifier, unit: 
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLo, maxLines = 1)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, style = MaterialTheme.typography.headlineSmall, color = accent)
+            Text(value, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp), color = accent, maxLines = 1, softWrap = false)
             if (unit.isNotEmpty()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = TextLo,
                 modifier = Modifier.padding(bottom = 4.dp))
         }
@@ -358,3 +367,20 @@ fun RingLabel(value: String, label: String, color: Color = TextHi) {
 }
 
 fun Double.fmt(): String = if (this % 1.0 == 0.0) this.toInt().toString() else "%.1f".format(this)
+
+/** Чип выбора в фирменном стиле (замена FilterChip). */
+@Composable
+fun GoldChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit) {
+    val bg = if (selected) GoldGradient else Brush.linearGradient(listOf(Surface1, Surface1))
+    Box(
+        Modifier.clip(CircleShape).background(bg)
+            .border(1.dp, if (selected) Color.Transparent else StrokeColor, CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides (if (selected) Color(0xFF1C1200) else TextHi),
+            androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.labelLarge,
+        ) { label() }
+    }
+}

@@ -51,10 +51,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.luxmaxx.app.AppViewModel
+import com.luxmaxx.app.ui.components.HeroBanner
+import com.luxmaxx.app.ui.components.MarkdownText
 import com.luxmaxx.app.ui.components.PhotoPickerRow
 import com.luxmaxx.app.ui.components.PhotoPreview
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.BorderGradient
@@ -144,8 +147,8 @@ private fun AiButton(text: String, busy: Boolean, enabled: Boolean = true, onCli
 private fun AiResult(text: String?) {
     if (text.isNullOrBlank()) return
     SelectionContainer {
-        Text(
-            text, style = MaterialTheme.typography.bodyMedium, color = TextHi,
+        MarkdownText(
+            text, accent = Violet,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Violet.copy(alpha = 0.10f))
                 .border(1.dp, Violet.copy(alpha = 0.25f), RoundedCornerShape(16.dp)).padding(14.dp),
         )
@@ -176,7 +179,10 @@ private fun HairTab(vm: AppViewModel) {
     val busy by vm.aiBusy.collectAsStateWithLifecycle()
     val l = d.looks
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { ScreenHeader("Волосы", overline = "Стрижка и уход", subtitle = "AI подберёт стрижку под форму лица и уход под твой тип волос") }
+        item {
+            HeroBanner("Волосы", "AI подберёт стрижку под форму лица и уход под твой тип волос", "💈",
+                colors = listOf(Color(0xFF2A1218), Color(0xFF14141A)), accent = Color(0xFFFF6B8A), modifier = Modifier.padding(top = 12.dp).enter(0))
+        }
         item {
             SectionCard("Твои волосы", icon = Icons.Filled.ContentCut) {
                 Text("Тип", style = MaterialTheme.typography.labelLarge, color = TextLo)
@@ -246,7 +252,10 @@ private fun StyleTab(vm: AppViewModel) {
     val l = d.looks
     val p = d.profile
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { ScreenHeader("Стиль", overline = "Одежда", subtitle = "Как одеваться, чтобы фигура выглядела мощнее") }
+        item {
+            HeroBanner("Стиль", "Как одеваться, чтобы фигура выглядела мощнее", "🧥",
+                colors = listOf(Color(0xFF0F1E33), Color(0xFF12141A)), accent = Blue, modifier = Modifier.padding(top = 12.dp).enter(0))
+        }
         item {
             SectionCard("Твой стиль", icon = Icons.Filled.Checkroom) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -318,8 +327,8 @@ private fun IdolTab(vm: AppViewModel) {
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            ScreenHeader("Кумир", overline = "Твой ориентир",
-                subtitle = "Добавь фото того, на кого хочешь быть похож. AI сравнит и скажет, что реально перенять.")
+            HeroBanner("Кумир", "Добавь фото того, на кого хочешь быть похож — AI скажет, что реально перенять", "🏆",
+                modifier = Modifier.padding(top = 12.dp).enter(0))
         }
         item {
             SectionCard("Кто твой ориентир", icon = Icons.Filled.Star) {

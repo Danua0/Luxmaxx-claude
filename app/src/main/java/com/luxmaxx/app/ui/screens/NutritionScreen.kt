@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -41,23 +42,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
 import com.luxmaxx.app.ai.EstimatedFood
 import com.luxmaxx.app.today
+import com.luxmaxx.app.ui.components.AnimatedNumber
+import com.luxmaxx.app.ui.components.BarChart
+import com.luxmaxx.app.ui.components.ConcentricRings
 import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.HeroBanner
 import com.luxmaxx.app.ui.components.MacroBar
 import com.luxmaxx.app.ui.components.NumberField
 import com.luxmaxx.app.ui.components.Pill
 import com.luxmaxx.app.ui.components.ProgressRing
 import com.luxmaxx.app.ui.components.RingLabel
+import com.luxmaxx.app.ui.components.RingSpec
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Blue
 import com.luxmaxx.app.ui.theme.Gold
+import com.luxmaxx.app.ui.theme.GoldDeep
 import com.luxmaxx.app.ui.theme.Green
 import com.luxmaxx.app.ui.theme.Red
 import com.luxmaxx.app.ui.theme.Stroke
@@ -66,21 +75,21 @@ import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
 import com.luxmaxx.app.ui.theme.Violet
 
-private data class Preset(val name: String, val kcal: Int, val p: Int, val c: Int, val f: Int)
+private data class Preset(val name: String, val kcal: Int, val p: Int, val c: Int, val f: Int, val emoji: String = "🍽")
 
 private val presets = listOf(
-    Preset("Куриная грудка 150 г", 165, 35, 0, 3),
-    Preset("3 яйца", 210, 18, 1, 15),
-    Preset("Рис 100 г (сух.)", 345, 7, 76, 1),
-    Preset("Гречка 100 г (сух.)", 330, 13, 68, 3),
-    Preset("Овсянка 80 г", 300, 10, 52, 5),
-    Preset("Творог 5% 200 г", 240, 34, 6, 10),
-    Preset("Протеин 1 скуп", 120, 24, 3, 1),
-    Preset("Банан", 105, 1, 27, 0),
-    Preset("Молоко 2.5% 250 мл", 130, 7, 12, 6),
-    Preset("Арахисовая паста 30 г", 180, 7, 6, 15),
-    Preset("Говядина 150 г", 280, 39, 0, 14),
-    Preset("Макароны 100 г (сух.)", 350, 12, 70, 2),
+    Preset("Куриная грудка 150 г", 165, 35, 0, 3, "🍗"),
+    Preset("3 яйца", 210, 18, 1, 15, "🥚"),
+    Preset("Рис 100 г (сух.)", 345, 7, 76, 1, "🍚"),
+    Preset("Гречка 100 г (сух.)", 330, 13, 68, 3, "🌾"),
+    Preset("Овсянка 80 г", 300, 10, 52, 5, "🥣"),
+    Preset("Творог 5% 200 г", 240, 34, 6, 10, "🧀"),
+    Preset("Протеин 1 скуп", 120, 24, 3, 1, "🥤"),
+    Preset("Банан", 105, 1, 27, 0, "🍌"),
+    Preset("Молоко 2.5% 250 мл", 130, 7, 12, 6, "🥛"),
+    Preset("Арахисовая паста 30 г", 180, 7, 6, 15, "🥜"),
+    Preset("Говядина 150 г", 280, 39, 0, 14, "🥩"),
+    Preset("Макароны 100 г (сух.)", 350, 12, 70, 2, "🍝"),
 )
 
 @Composable
@@ -103,14 +112,28 @@ fun NutritionScreen(vm: AppViewModel) {
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenHeader("Питание", overline = "Профицит для роста", subtitle = "Цель: ${t.kcal} ккал · ${t.protein} г белка") }
         item {
-            SectionCard {
+            HeroBanner("Питание", "Цель: ${t.kcal} ккал · ${t.protein} г белка в день", "🥩",
+                colors = listOf(Color(0xFF0F2A1E), Color(0xFF12161A)), accent = Green, modifier = Modifier.padding(top = 10.dp).enter(0))
+        }
+        item {
+            SectionCard(modifier = Modifier.enter(1)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProgressRing(kcal.toFloat() / t.kcal, size = 128.dp, thickness = 13.dp) {
-                        RingLabel("$kcal", "из ${t.kcal} ккал", color = Gold)
+                    ConcentricRings(
+                        listOf(
+                            RingSpec(kcal.toFloat() / t.kcal, listOf(GoldDeep, Gold)),
+                            RingSpec(prot.toFloat() / t.protein, listOf(Color(0xFF1FAF74), Green)),
+                            RingSpec(foods.sumOf { it.carbs }.toFloat() / t.carbs.coerceAtLeast(1), listOf(Color(0xFF3D7BFF), Blue)),
+                            RingSpec(foods.sumOf { it.fat }.toFloat() / t.fat.coerceAtLeast(1), listOf(Color(0xFF7B5BFF), Violet)),
+                        ),
+                        size = 140.dp, thickness = 10.dp, gap = 3.dp,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            AnimatedNumber(kcal, MaterialTheme.typography.titleLarge, Gold)
+                            Text("из ${t.kcal}", style = MaterialTheme.typography.labelSmall, color = TextLo)
+                        }
                     }
-                    Spacer(Modifier.width(18.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         MacroBar("Белок", prot, t.protein, "г", Green)
                         MacroBar("Углеводы", foods.sumOf { it.carbs }, t.carbs, "г", Blue)
@@ -126,6 +149,17 @@ fun NutritionScreen(vm: AppViewModel) {
                     },
                     style = MaterialTheme.typography.bodySmall, color = TextLo,
                 )
+            }
+        }
+        item {
+            val days = (6 downTo 0).map { java.time.LocalDate.now().minusDays(it.toLong()) }
+            val wd = listOf("ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС")
+            SectionCard("Калории за неделю", icon = Icons.Filled.BarChart, accent = Gold, modifier = Modifier.enter(2)) {
+                BarChart(
+                    days.map { day -> d.foods.filter { it.date == day.toString() }.sumOf { it.kcal } },
+                    days.map { wd[it.dayOfWeek.value - 1] }, t.kcal,
+                )
+                Text("Пунктир — цель. Зелёные столбики — норма выполнена.", style = MaterialTheme.typography.bodySmall, color = TextLo)
             }
         }
         item {
@@ -163,7 +197,7 @@ fun NutritionScreen(vm: AppViewModel) {
                                 .clickable { vm.addFood(pr.name, pr.kcal, pr.p, pr.c, pr.f); vm.message.value = "+ ${pr.name}" }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
-                            Text(pr.name, style = MaterialTheme.typography.labelLarge, color = TextHi)
+                            Text("${pr.emoji}  ${pr.name}", style = MaterialTheme.typography.labelLarge, color = TextHi)
                             Text("${pr.kcal} ккал · Б${pr.p}", style = MaterialTheme.typography.labelMedium, color = TextLo)
                         }
                     }

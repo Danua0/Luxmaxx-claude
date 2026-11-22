@@ -11,8 +11,8 @@ import com.luxmaxx.app.ai.FaceAiResult
 import com.luxmaxx.app.data.AppData
 import com.luxmaxx.app.data.ChatMessage
 import com.luxmaxx.app.data.FaceCheck
-import com.luxmaxx.app.data.Looks
 import com.luxmaxx.app.data.FoodEntry
+import com.luxmaxx.app.data.Looks
 import com.luxmaxx.app.data.Profile
 import com.luxmaxx.app.data.Repository
 import com.luxmaxx.app.data.SetEntry
@@ -24,6 +24,7 @@ import com.luxmaxx.app.face.ImageEncoder
 import com.luxmaxx.app.logic.Calculator
 import com.luxmaxx.app.logic.Program
 import com.luxmaxx.app.logic.Programs
+import com.luxmaxx.app.logic.Progress
 import com.luxmaxx.app.logic.Targets
 import java.io.File
 import java.time.LocalDate
@@ -43,10 +44,49 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val aiBusy = MutableStateFlow(false)
     val message = MutableStateFlow<String?>(null)   // снекбар
 
+    /** Праздничный экран: новая ачивка, новый уровень или завершённая тренировка. */
+    data class Celebration(val emoji: String, val title: String, val subtitle: String, val color: Long = 0xFFFFC14D)
+    val celebration = MutableStateFlow<Celebration?>(null)
+    private val celebrationQueue = ArrayDeque<Celebration>()
+
+    fun celebrate(c: Celebration) {
+        if (celebration.value == null) celebration.value = c else celebrationQueue.addLast(c)
+    }
+
+    fun dismissCelebration() {
+        celebration.value = celebrationQueue.removeFirstOrNull()
+    }
+
     private fun mutate(block: (AppData) -> AppData) {
-        _data.update(block)
+        val news = mutableListOf<Celebration>()
+        _data.update { old ->
+            var d = block(old)
+            if (d.profile != null) {
+                val protein = targets(d)?.protein ?: 140
+                val unlocked = Progress.unlockedIds(d, protein)
+                val fresh = unlocked - d.seenAchievements
+                val lvl = Progress.level(d, protein)
+                // при первом запуске не засыпаем пользователя старыми ачивками
+                val firstSync = !d.achievementsInit
+                if (firstSync) d = d.copy(achievementsInit = true)
+                if (fresh.isNotEmpty()) {
+                    if (!firstSync) Progress.achievements.filter { it.id in fresh }.forEach {
+                        news += Celebration(it.emoji, "Ачивка: ${it.title}", it.description, it.color)
+                    }
+                    d = d.copy(seenAchievements = d.seenAchievements + fresh)
+                }
+                if (lvl.level > d.seenLevel) {
+                    if (!firstSync) news += Celebration(lvl.rank.emoji, "Уровень ${lvl.level}!", "Твой ранг: ${lvl.rank.title}")
+                    d = d.copy(seenLevel = lvl.level)
+                }
+            }
+            d
+        }
+        news.forEach { celebrate(it) }
         viewModelScope.launch { repo.save(_data.value) }
     }
+
+    fun levelInfo(d: AppData = data.value) = Progress.level(d, targets(d)?.protein ?: 140)
 
     // ---------- Производные значения ----------
     fun currentWeight(d: AppData = data.value): Double =
@@ -88,8 +128,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val day = activeDay.value ?: return
         val sets = activeSets.value
         if (sets.isNotEmpty()) {
+            celebrate(Celebration("💪", "Тренировка завершена!",
+                "Объём ${sets.sumOf { it.weight * it.reps }.toInt()} кг · ${sets.size} подходов · +${100 + sets.size * 5} XP"))
             mutate { it.copy(workouts = it.workouts + WorkoutLog(System.currentTimeMillis(), today(), day, sets)) }
-            message.value = "Тренировка сохранена 💪 Объём: ${sets.sumOf { it.weight * it.reps }.toInt()} кг"
         }
         cancelWorkout()
     }

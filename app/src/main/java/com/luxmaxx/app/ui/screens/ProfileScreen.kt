@@ -2,11 +2,16 @@ package com.luxmaxx.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.luxmaxx.app.AppViewModel
 import com.luxmaxx.app.data.Activity
@@ -43,20 +49,27 @@ import com.luxmaxx.app.data.Experience
 import com.luxmaxx.app.data.Profile
 import com.luxmaxx.app.data.Sex
 import com.luxmaxx.app.logic.Calculator
+import com.luxmaxx.app.ui.components.GoldChip
 import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.LogoMark
 import com.luxmaxx.app.ui.components.NumberField
+import com.luxmaxx.app.ui.components.Pill
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
 import com.luxmaxx.app.ui.components.StatTile
+import com.luxmaxx.app.ui.components.Wordmark
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.fmt
 import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Blue
+import com.luxmaxx.app.ui.theme.Gold
 import com.luxmaxx.app.ui.theme.Green
+import com.luxmaxx.app.ui.theme.TextHi
 import com.luxmaxx.app.ui.theme.TextLo
 import com.luxmaxx.app.ui.theme.Violet
 
 @Composable
-fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boolean, onDone: () -> Unit) {
+fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boolean, onDone: () -> Unit, onAchievements: () -> Unit = {}) {
     val existing = vm.data.value.profile ?: Profile()
     var name by remember { mutableStateOf(existing.name) }
     var sex by remember { mutableStateOf(existing.sex) }
@@ -82,19 +95,41 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                if (!firstRun) IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
-                ScreenHeader(if (firstRun) "Добро пожаловать" else "Профиль", overline = "LuxMaxx",
-                    subtitle = if (firstRun) "Заполни анкету — рассчитаю калории, белок и подберу программу." else null)
+            if (firstRun) Column(
+                Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 8.dp).enter(0),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                LogoMark(110.dp, spin = true)
+                Spacer(Modifier.height(18.dp))
+                Wordmark(30)
+                Spacer(Modifier.height(8.dp))
+                Text("Масса. Лицо. Стиль. Один AI-тренер.", style = MaterialTheme.typography.bodyMedium, color = TextLo)
+                Spacer(Modifier.height(18.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Pill("💪 Программа", Gold); Pill("🥩 КБЖУ", Green); Pill("✨ Образ", Violet)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Заполни анкету — рассчитаю калории, белок и подберу программу.",
+                    style = MaterialTheme.typography.bodySmall, color = TextLo, textAlign = TextAlign.Center)
+            } else Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = TextHi) }
+                ScreenHeader("Профиль", overline = "LuxMaxx")
             }
+        }
+        if (!firstRun) item {
+            val lvl = vm.levelInfo()
+            Box(Modifier.clickable(onClick = onAchievements)) { LevelCard(lvl) }
+        }
+        if (!firstRun) item {
+            GradientButton("🏆  Все достижения", onClick = onAchievements, modifier = Modifier.fillMaxWidth())
         }
         item {
             SectionCard("О тебе", icon = Icons.Filled.Person) {
                 OutlinedTextField(name, { name = it }, label = { Text("Имя") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp), colors = luxFieldColors())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(sex == Sex.MALE, { sex = Sex.MALE }, { Text("Мужчина") })
-                    FilterChip(sex == Sex.FEMALE, { sex = Sex.FEMALE }, { Text("Женщина") })
+                    GoldChip(sex == Sex.MALE, { sex = Sex.MALE }, { Text("Мужчина") })
+                    GoldChip(sex == Sex.FEMALE, { sex = Sex.FEMALE }, { Text("Женщина") })
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NumberField(age, { age = it }, "Возраст", Modifier.weight(1f), decimal = false)
@@ -106,7 +141,7 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
         item {
             SectionCard("Активность вне зала", icon = Icons.AutoMirrored.Filled.DirectionsWalk, accent = Blue) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Activity.entries.forEach { a -> FilterChip(activity == a, { activity = a }, { Text(a.title) }) }
+                    Activity.entries.forEach { a -> GoldChip(activity == a, { activity = a }, { Text(a.title) }) }
                 }
             }
         }
@@ -114,11 +149,11 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier, firstRun: Boo
             SectionCard("Тренировки", icon = Icons.Filled.FitnessCenter, accent = Green) {
                 Text("Сколько дней в неделю готов ходить в зал?")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    (2..6).forEach { d -> FilterChip(days == d, { days = d }, { Text("$d") }) }
+                    (2..6).forEach { d -> GoldChip(days == d, { days = d }, { Text("$d") }) }
                 }
                 Text("Опыт")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Experience.entries.forEach { e -> FilterChip(exp == e, { exp = e }, { Text(e.title) }) }
+                    Experience.entries.forEach { e -> GoldChip(exp == e, { exp = e }, { Text(e.title) }) }
                 }
             }
         }

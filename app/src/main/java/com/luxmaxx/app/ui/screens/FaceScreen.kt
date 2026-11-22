@@ -65,13 +65,17 @@ import com.luxmaxx.app.data.FaceCheck
 import com.luxmaxx.app.data.FaceMetrics
 import com.luxmaxx.app.face.FaceResult
 import com.luxmaxx.app.today
+import com.luxmaxx.app.ui.components.FaceMeshPhoto
 import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.HeroBanner
 import com.luxmaxx.app.ui.components.LabeledSlider
 import com.luxmaxx.app.ui.components.LineChart
+import com.luxmaxx.app.ui.components.MarkdownText
 import com.luxmaxx.app.ui.components.Pill
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
 import com.luxmaxx.app.ui.components.StatTile
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.Amber
 import com.luxmaxx.app.ui.theme.Blue
@@ -107,6 +111,8 @@ fun FaceScreen(vm: AppViewModel) {
     var photoPath by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingPath by rememberSaveable { mutableStateOf<String?>(null) }
     var metrics by remember { mutableStateOf<FaceMetrics?>(null) }
+    var contours by remember { mutableStateOf<List<List<Pair<Float, Float>>>>(emptyList()) }
+    var aspect by remember { mutableFloatStateOf(1f) }
     var warning by remember { mutableStateOf<String?>(null) }
     var analyzing by remember { mutableStateOf(false) }
 
@@ -128,9 +134,9 @@ fun FaceScreen(vm: AppViewModel) {
 
     LaunchedEffect(photoPath) {
         val p = photoPath ?: return@LaunchedEffect
-        analyzing = true; metrics = null; warning = null; aiResult = null
+        analyzing = true; metrics = null; warning = null; aiResult = null; contours = emptyList()
         when (val r = vm.analyzeFace(File(p))) {
-            is FaceResult.Ok -> { metrics = r.metrics; warning = r.warning }
+            is FaceResult.Ok -> { metrics = r.metrics; warning = r.warning; contours = r.contours; aspect = r.aspect }
             is FaceResult.Error -> warning = r.message
         }
         analyzing = false
@@ -144,8 +150,8 @@ fun FaceScreen(vm: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            ScreenHeader("Состояние лица", overline = "Ежедневный чек-ин",
-                subtitle = "Замеры делаются на телефоне. Фото уходит в DeepSeek только по кнопке «AI-анализ».")
+            HeroBanner("Лицо", "Сканер на телефоне + AI-разбор кожи. Фото уходит в DeepSeek только по кнопке.", "✨",
+                colors = listOf(Color(0xFF221A3A), Color(0xFF14141E)), accent = Violet, modifier = Modifier.padding(top = 12.dp).enter(0))
         }
 
         item {
@@ -167,16 +173,10 @@ fun FaceScreen(vm: AppViewModel) {
                         Text("  Галерея", color = TextHi, style = MaterialTheme.typography.labelLarge)
                     }
                 }
-                photoPath?.let { p ->
-                    AsyncImage(
-                        model = File(p), contentDescription = "Фото лица",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, BorderGradient, RoundedCornerShape(20.dp)),
-                    )
-                }
+                photoPath?.let { p -> FaceMeshPhoto(p, contours, aspect, scanning = analyzing || busy) }
                 if (analyzing) Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp)); Text("  Анализирую лицо…")
+                    CircularProgressIndicator(Modifier.size(18.dp), color = Violet, strokeWidth = 2.dp)
+                    Text("  Сканирую лицо…", color = Violet, style = MaterialTheme.typography.labelLarge)
                 }
                 metrics?.let { m ->
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -210,8 +210,8 @@ fun FaceScreen(vm: AppViewModel) {
                 aiResult?.let { r ->
                     if (r.skin != null) Text("AI выставил оценки ниже — поправь, если не согласен.",
                         style = MaterialTheme.typography.bodySmall, color = Amber)
-                    Text(r.asText(), style = MaterialTheme.typography.bodyMedium, color = TextHi,
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Violet.copy(alpha = 0.10f)).padding(14.dp))
+                    MarkdownText(r.asText(), accent = Violet,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Violet.copy(alpha = 0.10f)).padding(14.dp))
                 }
 
                 LabeledSlider("Кожа в целом", skin, 1f..10f, 8, { skin = it }, "/10")
@@ -309,7 +309,7 @@ fun FaceScreen(vm: AppViewModel) {
                 if (c.aiAdvice != null) {
                     Text(if (expanded == c.id) "Скрыть совет AI ▲" else "Показать совет AI ▼", color = Amber,
                         modifier = Modifier.clickable { expanded = if (expanded == c.id) null else c.id })
-                    if (expanded == c.id) Text(c.aiAdvice, style = MaterialTheme.typography.bodyMedium)
+                    if (expanded == c.id) MarkdownText(c.aiAdvice, accent = Violet)
                 } else {
                     Pill(if (busy) "AI думает…" else "✨ Получить советы AI", Violet,
                         Modifier.clickable(enabled = !busy) { vm.faceAdvice(c); expanded = c.id })

@@ -50,9 +50,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luxmaxx.app.AppViewModel
+import com.luxmaxx.app.ui.components.AiOrb
 import com.luxmaxx.app.ui.components.GradientButton
+import com.luxmaxx.app.ui.components.LogoMark
+import com.luxmaxx.app.ui.components.MarkdownText
 import com.luxmaxx.app.ui.components.ScreenHeader
 import com.luxmaxx.app.ui.components.SectionCard
+import com.luxmaxx.app.ui.components.TypingDots
+import com.luxmaxx.app.ui.components.enter
 import com.luxmaxx.app.ui.components.luxFieldColors
 import com.luxmaxx.app.ui.theme.BorderGradient
 import com.luxmaxx.app.ui.theme.CardGradient
@@ -107,39 +112,51 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (d.chat.isEmpty()) item {
-                Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Gold, GoldDeep))),
-                        contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.AutoAwesome, null, tint = Color(0xFF1C1200), modifier = Modifier.size(40.dp))
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text("Чем помочь?", style = MaterialTheme.typography.titleLarge, color = TextHi)
-                    Text("Спроси про тренировки, питание или уход за лицом",
-                        style = MaterialTheme.typography.bodyMedium, color = TextLo)
+                Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AiOrb(170.dp)
+                    Spacer(Modifier.height(10.dp))
+                    Text("Чем помочь?", style = MaterialTheme.typography.headlineMedium, color = TextHi)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Я вижу твой профиль, тренировки, питание и образ — спрашивай что угодно",
+                        style = MaterialTheme.typography.bodyMedium, color = TextLo, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             items(d.chat) { m ->
                 val mine = m.role == "user"
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+                Row(Modifier.fillMaxWidth().enter(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+                    verticalAlignment = Alignment.Bottom) {
                     val shape = if (mine) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
+                    if (!mine) { LogoMark(30.dp, glow = false); Spacer(Modifier.width(6.dp)) }
                     SelectionContainer {
-                        Text(
+                        if (mine) Text(
                             m.content,
                             modifier = Modifier
-                                .widthIn(max = 310.dp)
+                                .widthIn(max = 290.dp)
                                 .clip(shape)
-                                .background(if (mine) Brush.linearGradient(listOf(Gold, GoldDeep)) else CardGradient)
-                                .border(1.dp, if (mine) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else BorderGradient, shape)
+                                .background(Brush.linearGradient(listOf(Gold, GoldDeep)))
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
-                            color = if (mine) Color(0xFF1C1200) else TextHi,
+                            color = Color(0xFF1C1200),
                             style = MaterialTheme.typography.bodyMedium,
+                        ) else MarkdownText(
+                            m.content,
+                            modifier = Modifier
+                                .widthIn(max = 300.dp)
+                                .clip(shape)
+                                .background(CardGradient)
+                                .border(1.dp, BorderGradient, shape)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                         )
                     }
                 }
             }
             if (busy) item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(18.dp), color = Gold, strokeWidth = 2.dp); Text("  Думаю…", color = TextLo)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    LogoMark(30.dp, glow = false, spin = true); Spacer(Modifier.width(6.dp))
+                    Box(
+                        Modifier.clip(RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)).background(CardGradient)
+                            .border(1.dp, BorderGradient, RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp))
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                    ) { TypingDots() }
                 }
             }
         }
