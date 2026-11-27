@@ -401,3 +401,98 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 $contextJson
 
 Ты можешь предложить изменение тренировочной программы. Создавай action ТОЛЬКО если пользователь прямо просит составить, изменить или перестроить программу; при обычном обсуждении или вопросе actions=[] . Не утверждай, что что-либо уже изменено. Если пользователь прямо просит изменить программу, верни JSON с reply и actions
+val history = d.chat.takeLast(30).map { ChatMessage(it.role, it.content) }
+            val imageFile = imagePath?.let { File(it) }?.takeIf { it.exists() }
+            val imageBase64 = imageFile?.let { ImageEncoder.toJpegBase64(it) }
+            val raw = DeepSeekClient.chat(
+                d.apiKey,
+                listOf(ChatMessage("system", systemPrompt() + agentRules)) + history,
+                temperature = 0.4,
+                jsonMode = true,
+                model = if (imageBase64 != null) d.visionModel else d.textModel,
+                imageJpegBase64 = imageBase64,
+            )
+            val parsed = runCatching { stateJson.parseToJsonElement(raw).jsonObject }.getOrNull()
+            val reply = parsed?.get("reply")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: raw
+            val plan = runCatching {
+                parsed?.get("actions")?.jsonArray?.firstNotNullOfOrNull { element ->
+                    runCatching { parseProgramAction(element.jsonObject) }.getOrNull()
+                }
+            }.getOrNull()
+            if (plan != null) proposedProgram.value = plan
+            mutate { it.copy(chat = it.chat + ChatMessage("assistant", reply)) }
+        }
+    }
+
+    private fun parseProgramAction(action: JsonObject): SavedProgram? {
+        if (action["type"]?.jsonPrimitive?.contentOrNull != "replace_training_plan") return null
+        val title = action["title"]?.jsonPrimitive?.contentOrNull?.take(80)?.ifBlank { "Моя программа" } ?: "Моя программа"
+        val description = action["description"]?.jsonPrimitive?.contentOrNull?.take(500) ?: "Программа составлена AI-тренером"
+        val daysJson = action["days"]?.jsonArray ?: return null
+        if (daysJson.isEmpty() || daysJson.size > 7) return null
+        val days = daysJson.mapIndexed { index, dayElement ->
+            val day = dayElement.jsonObject
+            val name = day["name"]?.jsonPrimitive?.contentOrNull?.take(60)?.ifBlank { "День ${index + 1}" } ?: "День ${index + 1}"
+            val exercisesJson = day["exercises"]?.jsonArray ?: JsonArray(emptyList())
+            require(exercisesJson.isNotEmpty() && exercisesJson.size <= 15) { "Некорректное количество упражнений" }
+            val exercises = exercisesJson.map { exElement ->
+                val ex = exElement.jsonObject
+                val exName = ex["name"]?.jsonPrimitive?.contentOrNull?.take(100)?.trim().orEmpty()
+                val sets = ex["sets"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 3
+                val min = ex["repMin"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 8
+                val max = ex["repMax"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 12
+                require(exName.isNotBlank() && sets in 1..8 && min in 1..30 && max in min..40)
+                SavedPlannedExercise(exName, sets, min, max, ex["tip"]?.jsonPrimitive?.contentOrNull?.take(250) ?: "")
+            }
+            SavedWorkoutDay(name, exercises)
+        }
+        return SavedProgram(title, description, days)
+    }
+
+    fun clearChat() {
+        data.value.chat.mapNotNull { it.imagePath }.distinct().forEach { File(it).delete() }
+        mutate { it.copy(chat = emptyList()) }
+    }
+
+    /** Системный промпт с актуальными данными пользователя — чтобы советы были персональными. */
+    fun systemPrompt(): String {
+        val d = data.value
+        val p = d.profile
+        val t = targets(d)
+        val todayFoods = d.foods.filter { it.date == today() }
+        val recentWorkouts = d.workouts.sortedByDescending { it.id }.take(5).joinToString("\n") { w ->
+            "- ${w.date} ${w.dayName}: " + w.sets.groupBy { it.exercise }.entries.joinToString("; ") { (ex, s) ->
+                "$ex ${s.joinToString(",") { "${it.weight}×${it.reps}" }}"
+            }
+        }
+        val weights = d.weights.sortedBy { it.date }.takeLast(14).joinToString { "${it.date}: ${it.kg}" }
+        val lastFace = d.faceChecks.maxByOrNull { it.id }?.let { faceLine(it) } ?: "нет"
+        return """Ты — персональный тренер, нутрициолог и консультант по уходу за кожей в приложении LuxMaxx.
+            |Цель пользователя: максимально набрать мышечную массу и улучшить внешний вид/состояние лица.
+            |Отвечай на русском, по-дружески, кратко и конкретно, опирайся на научные данные.
+            |Не ставь медицинских диагнозов; при тревожных симптомах советуй врача/дерматолога. Не советуй стероиды, SARMs и опасные практики.
+            |
+            |Профиль: ${p?.let { "${if (it.sex.name == "MALE") "мужчина" else "женщина"}, ${it.age} лет, рост ${it.heightCm} см, вес ${currentWeight(d)} кг, опыт: ${it.experience.title}, тренировок в неделю: ${it.trainingDays}" } ?: "не заполнен"}
+            |Цели в день: ${t?.let { "${it.kcal} ккал, белок ${it.protein} г, жиры ${it.fat} г, углеводы ${it.carbs} г" } ?: "-"}
+            |Сегодня съедено: ${todayFoods.sumOf { it.kcal }} ккал, белок ${todayFoods.sumOf { it.protein }} г
+            |Вес (последние записи): ${weights.ifBlank { "нет" }}
+            |Программа: ${program(d)?.title ?: "-"}
+            |Где тренируется: ${if (d.trainAtHome) "дома, инвентарь: " + (d.homeEquipment.joinToString { it.title }.ifBlank { "только вес тела" }) else "в зале"}
+            |Последние тренировки:
+            |${recentWorkouts.ifBlank { "нет" }}
+            |Последняя отметка лица: $lastFace
+            |Ориентир по внешности (кумир): ${d.looks.idolName.ifBlank { "не задан" }}${d.looks.idolAnalysis?.let { "\nКраткий разбор кумира: ${it.take(700)}" } ?: ""}
+            |Волосы: ${d.looks.hairType}, ${d.looks.hairLength}, проблемы: ${d.looks.hairIssues.ifEmpty { listOf("нет") }.joinToString()}
+            |Цель по стилю: ${d.looks.styleGoal.ifBlank { "не задана" }}""".trimMargin()
+    }
+
+    private fun ai(block: suspend () -> Unit) {
+        if (aiBusy.value) return
+        viewModelScope.launch {
+            aiBusy.value = true
+            try { block() } catch (e: DeepSeekException) { message.value = e.message }
+            catch (e: Exception) { message.value = "Ошибка: ${e.message}" }
+            finally { aiBusy.value = false }
+        }
+    }
+}
