@@ -16,6 +16,9 @@ import com.luxmaxx.app.data.FoodEntry
 import com.luxmaxx.app.data.Looks
 import com.luxmaxx.app.data.Profile
 import com.luxmaxx.app.data.Repository
+import com.luxmaxx.app.data.SavedProgram
+import com.luxmaxx.app.data.SavedWorkoutDay
+import com.luxmaxx.app.data.SavedPlannedExercise
 import com.luxmaxx.app.data.SetEntry
 import com.luxmaxx.app.data.WeightEntry
 import com.luxmaxx.app.data.WorkoutLog
@@ -37,6 +40,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 fun today(): String = LocalDate.now().toString()
 
@@ -44,9 +56,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = Repository(app)
     private val _data = MutableStateFlow(repo.load())
     val data: StateFlow<AppData> = _data.asStateFlow()
+    private val saveQueue = Channel<AppData>(Channel.UNLIMITED)
+    private val stateJson = Json { encodeDefaults = true; ignoreUnknownKeys = true }
+    val proposedProgram = MutableStateFlow<SavedProgram?>(null)
+    val aiBusy = MutableStateFlow(false)
+    val message = MutableStateFlow<String?>(null)   // снекбар
 
     init {
         ThemeState.apply(themeOf(_data.value.theme))
+        repo.loadWarning?.let { message.value = it }
+        viewModelScope.launch {
+            for (snapshot in saveQueue) {
+                try { repo.save(snapshot) }
+                catch (e: Exception) { message.value = "Не удалось сохранить данные: ${e.message}" }
+            }
+        }
     }
 
     private fun themeOf(name: String) = AppTheme.entries.firstOrNull { it.name == name } ?: AppTheme.GOLD
@@ -55,9 +79,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ThemeState.apply(t)
         mutate { it.copy(theme = t.name) }
     }
-
-    val aiBusy = MutableStateFlow(false)
-    val message = MutableStateFlow<String?>(null)   // снекбар
 
     /** Праздничный экран: новая ачивка, новый уровень или завершённая тренировка. */
     data class Celebration(val emoji: String, val title: String, val subtitle: String, val color: Long = 0xFFFFC14D)
@@ -98,7 +119,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             d
         }
         news.forEach { celebrate(it) }
-        viewModelScope.launch { repo.save(_data.value) }
+        saveQueue.trySend(_data.value)
     }
 
     fun levelInfo(d: AppData = data.value) = Progress.level(d, targets(d)?.protein ?: 140)
@@ -111,9 +132,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun program(d: AppData = data.value): Program? =
         d.profile?.let {
-            val gym = Programs.forProfile(it.trainingDays, it.experience)
-            if (d.trainAtHome) HomeWorkouts.toHome(gym, d.homeEquipment) else gym
+            val saved = d.customProgram?.let { custom ->
+                Program(custom.title, custom.description, custom.days.map { day ->
+                    com.luxmaxx.app.logic.WorkoutDay(day.name, day.exercises.map { ex ->
+                        com.luxmaxx.app.logic.PlannedExercise(ex.name, ex.sets, ex.repMin, ex.repMax, ex.tip)
+                    })
+                })
+            } ?: Programs.forProfile(it.trainingDays, it.experience)
+            if (d.trainAtHome && d.customProgram == null) HomeWorkouts.toHome(saved, d.homeEquipment) else saved
         }
+
+    fun applyProposedProgram() {
+        val proposed = proposedProgram.value ?: return
+        mutate { old -> old.copy(
+            customProgram = proposed,
+            profile = old.profile?.copy(trainingDays = proposed.days.size.coerceIn(2, 6)),
+        ) }
+        proposedProgram.value = null
+        message.value = "Новая программа тренировок применена"
+    }
+
+    fun discardProposedProgram() { proposedProgram.value = null }
+
+    fun importChatPhoto(uri: Uri): File? = importFacePhoto(uri, "chat")
 
     fun setTrainAtHome(home: Boolean) = mutate { it.copy(trainAtHome = home) }
     fun toggleEquip(e: Equip) = mutate {
@@ -340,58 +381,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- AI-тренер ----------
-    fun sendChat(text: String) {
-        if (text.isBlank()) return
-        mutate { it.copy(chat = it.chat + ChatMessage("user", text.trim())) }
+    fun sendChat(text: String, imagePath: String? = null) {
+        if (text.isBlank() && imagePath.isNullOrBlank()) return
+        val userText = text.trim().ifBlank { "Проанализируй прикреплённое фото и дай рекомендации с учётом моих данных в Luxxmaxx." }
+        mutate { it.copy(chat = it.chat + ChatMessage("user", userText, imagePath)) }
         ai {
-            val history = data.value.chat.takeLast(20)
-            val answer = DeepSeekClient.chat(data.value.apiKey, listOf(ChatMessage("system", systemPrompt())) + history,
-                model = data.value.textModel)
-            mutate { it.copy(chat = it.chat + ChatMessage("assistant", answer)) }
-        }
-    }
+            val d = data.value
+            // AI получает структурированные данные приложения целиком. Секрет API и внутренние пути к файлам не передаются.
+            val safeData = d.copy(
+                apiKey = "",
+                chat = d.chat.map { it.copy(imagePath = null) },
+                faceChecks = d.faceChecks.map { it.copy(photoPath = null) },
+                looks = d.looks.copy(idolPhotoPath = null, hairPhotoPath = null, outfitPhotoPath = null),
+            )
+            val contextJson = stateJson.encodeToString(AppData.serializer(), safeData)
+            val agentRules = """
 
-    fun clearChat() = mutate { it.copy(chat = emptyList()) }
+ПОЛНЫЙ КОНТЕКСТ ДАННЫХ ПРИЛОЖЕНИЯ (JSON):
+$contextJson
 
-    /** Системный промпт с актуальными данными пользователя — чтобы советы были персональными. */
-    fun systemPrompt(): String {
-        val d = data.value
-        val p = d.profile
-        val t = targets(d)
-        val todayFoods = d.foods.filter { it.date == today() }
-        val recentWorkouts = d.workouts.sortedByDescending { it.id }.take(5).joinToString("\n") { w ->
-            "- ${w.date} ${w.dayName}: " + w.sets.groupBy { it.exercise }.entries.joinToString("; ") { (ex, s) ->
-                "$ex ${s.joinToString(",") { "${it.weight}×${it.reps}" }}"
-            }
-        }
-        val weights = d.weights.sortedBy { it.date }.takeLast(14).joinToString { "${it.date}: ${it.kg}" }
-        val lastFace = d.faceChecks.maxByOrNull { it.id }?.let { faceLine(it) } ?: "нет"
-        return """Ты — персональный тренер, нутрициолог и консультант по уходу за кожей в приложении LuxMaxx.
-            |Цель пользователя: максимально набрать мышечную массу и улучшить внешний вид/состояние лица.
-            |Отвечай на русском, по-дружески, кратко и конкретно, опирайся на научные данные.
-            |Не ставь медицинских диагнозов; при тревожных симптомах советуй врача/дерматолога. Не советуй стероиды, SARMs и опасные практики.
-            |
-            |Профиль: ${p?.let { "${if (it.sex.name == "MALE") "мужчина" else "женщина"}, ${it.age} лет, рост ${it.heightCm} см, вес ${currentWeight(d)} кг, опыт: ${it.experience.title}, тренировок в неделю: ${it.trainingDays}" } ?: "не заполнен"}
-            |Цели в день: ${t?.let { "${it.kcal} ккал, белок ${it.protein} г, жиры ${it.fat} г, углеводы ${it.carbs} г" } ?: "-"}
-            |Сегодня съедено: ${todayFoods.sumOf { it.kcal }} ккал, белок ${todayFoods.sumOf { it.protein }} г
-            |Вес (последние записи): ${weights.ifBlank { "нет" }}
-            |Программа: ${program(d)?.title ?: "-"}
-            |Где тренируется: ${if (d.trainAtHome) "дома, инвентарь: " + (d.homeEquipment.joinToString { it.title }.ifBlank { "только вес тела" }) else "в зале"}
-            |Последние тренировки:
-            |${recentWorkouts.ifBlank { "нет" }}
-            |Последняя отметка лица: $lastFace
-            |Ориентир по внешности (кумир): ${d.looks.idolName.ifBlank { "не задан" }}${d.looks.idolAnalysis?.let { "\nКраткий разбор кумира: ${it.take(700)}" } ?: ""}
-            |Волосы: ${d.looks.hairType}, ${d.looks.hairLength}, проблемы: ${d.looks.hairIssues.ifEmpty { listOf("нет") }.joinToString()}
-            |Цель по стилю: ${d.looks.styleGoal.ifBlank { "не задана" }}""".trimMargin()
-    }
-
-    private fun ai(block: suspend () -> Unit) {
-        if (aiBusy.value) return
-        viewModelScope.launch {
-            aiBusy.value = true
-            try { block() } catch (e: DeepSeekException) { message.value = e.message }
-            catch (e: Exception) { message.value = "Ошибка: ${e.message}" }
-            finally { aiBusy.value = false }
-        }
-    }
-}
+Ты можешь предложить изменение тренировочной программы. Создавай action ТОЛЬКО если пользователь прямо просит составить, изменить или перестроить программу; при обычном обсуждении или вопросе actions=[] . Не утверждай, что что-либо уже изменено. Если пользователь прямо просит изменить программу, верни JSON с reply и actions
