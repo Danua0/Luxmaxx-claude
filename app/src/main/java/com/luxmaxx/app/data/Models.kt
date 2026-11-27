@@ -87,7 +87,26 @@ data class FaceCheck(
 )
 
 @Serializable
-data class ChatMessage(val role: String, val content: String)
+data class ChatMessage(val role: String, val content: String, val imagePath: String? = null)
+
+@Serializable
+data class SavedPlannedExercise(
+    val name: String,
+    val sets: Int,
+    val repMin: Int,
+    val repMax: Int,
+    val tip: String = "",
+)
+
+@Serializable
+data class SavedWorkoutDay(val name: String, val exercises: List<SavedPlannedExercise>)
+
+@Serializable
+data class SavedProgram(
+    val title: String,
+    val description: String,
+    val days: List<SavedWorkoutDay>,
+)
 
 @Serializable
 data class Looks(
@@ -128,4 +147,5 @@ data class AppData(
     val trainAtHome: Boolean = false,
     val theme: String = "GOLD",
     val homeEquipment: Set<Equip> = emptySet(),
+    val customProgram: SavedProgram? = null,
 )
