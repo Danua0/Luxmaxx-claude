@@ -1,5 +1,8 @@
 package com.luxmaxx.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,11 +50,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import java.io.File
 import com.luxmaxx.app.AppViewModel
 import com.luxmaxx.app.ui.components.AiOrb
 import com.luxmaxx.app.ui.components.GradientButton
@@ -83,7 +92,12 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
     val d by vm.data.collectAsStateWithLifecycle()
     val busy by vm.aiBusy.collectAsStateWithLifecycle()
     var input by remember { mutableStateOf("") }
+    var selectedImagePath by remember { mutableStateOf<String?>(null) }
+    val proposedProgram by vm.proposedProgram.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { vm.importChatPhoto(it)?.let { file -> selectedImagePath = file.absolutePath } }
+    }
 
     LaunchedEffect(d.chat.size, busy) {
         if (d.chat.isNotEmpty()) listState.animateScrollToItem(d.chat.size - 1 + if (busy) 1 else 0)
@@ -92,7 +106,7 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
     Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.padding(horizontal = 16.dp)) {
             ScreenHeader("AI-тренер", overline = "DeepSeek",
-                subtitle = "Видит твой профиль, питание, тренировки и состояние лица") {
+                subtitle = "Работает со всеми данными приложения и анализирует фото") {
                 if (d.chat.isNotEmpty()) IconButton(onClick = { vm.clearChat() }) { Icon(Icons.Filled.DeleteSweep, "Очистить чат", tint = TextLo) }
             }
         }
@@ -129,16 +143,24 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
                     val shape = if (mine) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
                     if (!mine) { LogoMark(30.dp, glow = false); Spacer(Modifier.width(6.dp)) }
                     SelectionContainer {
-                        if (mine) Text(
-                            m.content,
+                        if (mine) Column(
                             modifier = Modifier
                                 .widthIn(max = 290.dp)
                                 .clip(shape)
                                 .background(Brush.linearGradient(listOf(Gold, GoldDeep)))
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
-                            color = OnAccent,
-                            style = MaterialTheme.typography.bodyMedium,
-                        ) else MarkdownText(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            m.imagePath?.let { path ->
+                                val photo = File(path).takeIf { it.exists() }
+                                if (photo != null) AsyncImage(
+                                    model = photo, contentDescription = "Прикреплённое фото",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(12.dp)),
+                                )
+                            }
+                            Text(m.content, color = OnAccent, style = MaterialTheme.typography.bodyMedium)
+                        } else MarkdownText(
                             m.content,
                             modifier = Modifier
                                 .widthIn(max = 300.dp)
@@ -162,6 +184,24 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
             }
         }
 
+        if (proposedProgram != null) {
+            SectionCard("Предложение новой программы") {
+                val plan = proposedProgram!!
+                Text(plan.title, color = TextHi, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(plan.description, color = TextLo, style = MaterialTheme.typography.bodySmall)
+                plan.days.forEach { day ->
+                    Text(day.name, color = TextHi, fontWeight = FontWeight.SemiBold)
+                    day.exercises.forEach { ex ->
+                        Text("• ${ex.name} — ${ex.sets}×${ex.repMin}–${ex.repMax}", color = TextLo, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GradientButton("Применить программу", onClick = { vm.applyProposedProgram() }, modifier = Modifier.weight(1f))
+                    Button(onClick = { vm.discardProposedProgram() }) { Text("Отмена") }
+                }
+            }
+        }
+
         LazyRow(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -172,15 +212,30 @@ fun CoachScreen(vm: AppViewModel, onProfile: () -> Unit) {
                         .clickable(enabled = !busy) { vm.sendChat(s) }.padding(horizontal = 14.dp, vertical = 9.dp))
             }
         }
+        selectedImagePath?.let { path ->
+            val photo = File(path).takeIf { it.exists() }
+            if (photo != null) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(model = photo, contentDescription = "Фото для отправки", contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
+                Spacer(Modifier.width(8.dp))
+                Text("Фото прикреплено", color = TextLo, modifier = Modifier.weight(1f))
+                IconButton(onClick = { File(path).delete(); selectedImagePath = null }) {
+                    Icon(Icons.Filled.Close, "Убрать фото", tint = TextLo)
+                }
+            }
+        }
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, enabled = !busy) {
+                Icon(Icons.Filled.AddPhotoAlternate, "Прикрепить фото", tint = Gold)
+            }
             OutlinedTextField(input, { input = it }, modifier = Modifier.weight(1f),
                 placeholder = { Text("Сообщение…") }, maxLines = 4, shape = RoundedCornerShape(22.dp), colors = luxFieldColors())
             Spacer(Modifier.width(8.dp))
-            val canSend = !busy && input.isNotBlank()
+            val canSend = !busy && (input.isNotBlank() || selectedImagePath != null)
             Box(
                 Modifier.size(52.dp).clip(CircleShape)
                     .background(if (canSend) Brush.linearGradient(listOf(Gold, GoldDeep)) else Brush.linearGradient(listOf(Surface2, Surface2)))
-                    .clickable(enabled = canSend) { vm.sendChat(input); input = "" },
+                    .clickable(enabled = canSend) { vm.sendChat(input, selectedImagePath); input = ""; selectedImagePath = null },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.AutoMirrored.Filled.Send, "Отправить", tint = if (canSend) OnAccent else TextLo) }
         }
